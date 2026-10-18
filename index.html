@@ -1,0 +1,2224 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offerta</title>
+<meta name="application-name" content="Offerta">
+<meta name="offerta-api" content="https://offerta.serdox.workers.dev">
+<meta name="apple-mobile-web-app-title" content="Offerta">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14213D; --ink-soft:#3A4A6B; --amber:#E8871E; --amber-deep:#C46A0C;
+    --bg:#EEF0F2; --paper:#FFFFFF; --line:#D9DCE1; --line-soft:#E7E9EC; --muted:#6B7383; --danger:#B3261E;
+    --font-fallback: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --mono-fallback: "Courier New", monospace;
+    box-sizing:border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --bg:#14171C; --paper:#1D2127; --ink:#EDEFF2; --ink-soft:#B9C0CC; --line:#333A44; --line-soft:#2A2F37; --muted:#8891A0; }
+  }
+  :root[data-theme="dark"]{ --bg:#14171C; --paper:#1D2127; --ink:#EDEFF2; --ink-soft:#B9C0CC; --line:#333A44; --line-soft:#2A2F37; --muted:#8891A0; }
+  html,body{height:100%;}
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Inter', var(--font-fallback); -webkit-font-smoothing:antialiased; }
+  .mono{ font-family:'IBM Plex Mono', var(--mono-fallback); }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    background:var(--ink); color:#fff;
+    display:flex; align-items:center; gap:12px;
+    padding-left:20px; padding-right:20px; padding-bottom:14px;
+  }
+  .topbar .logo-badge{ background:#fff; border-radius:7px; padding:4px 7px; display:flex; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.25); }
+  .topbar .logo-badge img{ height:24px; width:auto; display:block; }
+  .topbar .word{ font-weight:800; font-size:17px; letter-spacing:0.2px; }
+  .topbar .tag{ margin-left:6px; font-size:12.5px; color:#C7CEDC; font-family:'IBM Plex Mono', var(--mono-fallback); padding-left:10px; border-left:1px solid #37415A; }
+  .topbar{ flex-wrap:wrap; row-gap:8px; }
+  .topbar .topbar-right{ margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .topbar .cloud-status{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:#C7CEDC; font-family:'IBM Plex Mono', var(--mono-fallback); cursor:pointer; }
+  .topbar .cs-dot{ width:8px; height:8px; border-radius:50%; background:#E0A52B; display:inline-block; }
+  .topbar .user-label{ font-size:12.5px; color:#C7CEDC; }
+  @media (max-width:640px){ .topbar .word, .topbar .user-label{ display:none; } }
+  .topbar .back-btn{
+    background:none; border:1.5px solid #4A5578; color:#fff;
+    padding:7px 14px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .topbar .back-btn:hover{ border-color:var(--amber); color:var(--amber); }
+
+  .wrap{ max-width:1400px; margin:0 auto; }
+
+  /* ---- Ana menü ---- */
+  .menu-screen{ padding:40px 24px 60px; max-width:900px; margin:0 auto; }
+  .menu-hello{ font-size:20px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .menu-sub{ font-size:13.5px; color:var(--muted); margin-bottom:32px; }
+  .menu-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .menu-grid{ grid-template-columns:1fr; } }
+  .menu-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:12px;
+    padding:22px; text-align:left; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; gap:8px; transition:border-color .15s, transform .1s;
+  }
+  .menu-card:hover{ border-color:var(--amber); }
+  .menu-card:active{ transform:scale(0.99); }
+  .menu-card .mc-bars{ display:flex; gap:3px; align-items:flex-end; height:20px; margin-bottom:6px; }
+  .menu-card .mc-bars span{ display:block; width:4px; background:var(--amber); border-radius:1px; }
+  .menu-card .mc-title{ font-size:15.5px; font-weight:700; color:var(--ink); }
+  .menu-card .mc-desc{ font-size:12.5px; color:var(--muted); line-height:1.5; }
+  .menu-card .mc-count{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:11px; color:var(--amber-deep); margin-top:2px; }
+  .conn-panel{ margin-top:28px; padding:16px 18px; border:1px solid var(--line); border-radius:10px; background:var(--paper); }
+  .conn-title{ font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+  .conn-text{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; }
+  .conn-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+
+  /* ---- Genel ekran / form stilleri ---- */
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+  .form-screen{ padding:24px 22px 60px; max-width:640px; margin:0 auto; }
+  .list-screen{ padding:24px 22px 60px; max-width:820px; margin:0 auto; }
+  .screen-title{ font-size:19px; font-weight:800; color:var(--ink); margin:0 0 4px; }
+  .screen-sub{ font-size:13px; color:var(--muted); margin:0 0 26px; }
+
+  .panel h2{ font-size:13px; letter-spacing:0.2px; color:var(--ink); font-weight:700; margin:28px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--line); display:flex; align-items:center; gap:8px; }
+  .panel h2:first-of-type{ margin-top:4px; }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+  .field input, .field select, .field textarea{
+    width:100%; padding:9px 10px; border:1px solid var(--line);
+    border-radius:6px; background:var(--paper); color:var(--ink);
+    font-size:14px; font-family:inherit;
+  }
+  .field textarea{ resize:vertical; min-height:56px; }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .picker-row{ display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; }
+  .picker-row .field{ flex:1; margin-bottom:0; }
+  .picker-btn{
+    padding:9px 12px; border:1.5px solid var(--amber); background:none; color:var(--amber-deep);
+    border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:inherit;
+  }
+  .picker-btn:hover{ background:var(--amber); color:#1a1200; }
+
+  .item-card{ border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:12px; background:var(--paper); position:relative; }
+  .item-card .item-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .item-card .item-num{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:12px; color:var(--muted); }
+  .item-card .remove-btn{ background:none; border:none; color:var(--danger); font-size:12.5px; cursor:pointer; padding:2px 6px; font-family:inherit; font-weight:500; }
+  .item-card .remove-btn:hover{ text-decoration:underline; }
+  .item-line-total{ margin-top:8px; text-align:right; font-family:'IBM Plex Mono', var(--mono-fallback); font-size:13px; color:var(--ink-soft); }
+  .item-line-total b{ color:var(--ink); }
+
+  .add-btn{ width:100%; padding:11px; border:1.5px dashed var(--line); background:none; border-radius:8px; color:var(--ink-soft); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .add-btn:hover{ border-color:var(--amber); color:var(--amber-deep); }
+
+  .data-table{ width:100%; border-collapse:collapse; margin-bottom:8px; background:var(--paper); border-radius:8px; overflow:hidden; border:1px solid var(--line); }
+  .data-table th{ text-align:left; font-size:11px; color:var(--muted); font-weight:700; padding:10px 12px; border-bottom:1px solid var(--line); background:var(--bg); }
+  .data-table th.num{ text-align:right; }
+  .data-table td{ padding:10px 12px; font-size:13px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  .data-table tr:last-child td{ border-bottom:none; }
+  .data-table td.num{ text-align:right; font-family:'IBM Plex Mono', var(--mono-fallback); white-space:nowrap; }
+  .view-btn, .del-btn{ background:none; border:1px solid var(--line); color:var(--ink-soft); font-size:11px; padding:4px 9px; border-radius:5px; cursor:pointer; font-family:inherit; white-space:nowrap; margin-left:6px; }
+  .view-btn:hover{ border-color:var(--amber); color:var(--amber-deep); }
+  .del-btn:hover{ border-color:var(--danger); color:var(--danger); }
+  .empty-hint{ font-size:12px; color:#8891A0; padding:20px 0; text-align:center; }
+
+  .quote-card{ border:1px solid var(--line); border-radius:9px; padding:14px 16px; margin-bottom:10px; background:var(--paper); }
+  .quote-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .quote-card-id{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:12px; color:var(--muted); }
+  .quote-card-name{ font-size:15px; font-weight:700; color:var(--ink); margin-top:2px; }
+  .quote-card-meta{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .quote-card-right{ text-align:right; }
+  .quote-card-amount{ font-family:'IBM Plex Mono', var(--mono-fallback); font-weight:700; font-size:15px; color:var(--ink); }
+  .quote-card-status{ margin-top:4px; font-size:12.5px; }
+  .quote-card-actions{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft); }
+  .quote-card-actions button{ flex:0 0 auto; }
+
+  .generate-wrap{ padding-top:16px; margin-top:18px; }
+  .generate-btn{ width:100%; padding:15px; border:none; border-radius:8px; background:var(--amber); color:#1a1200; font-weight:700; font-size:15px; cursor:pointer; box-shadow:0 2px 0 var(--amber-deep); font-family:inherit; }
+  .generate-btn:active{ transform:translateY(1px); box-shadow:0 1px 0 var(--amber-deep); }
+  .generate-btn:disabled{ opacity:0.6; cursor:progress; }
+  .status-msg{ font-size:12.5px; color:var(--muted); margin-top:8px; min-height:16px; }
+  .status-msg.err{ color:var(--danger); }
+  .status-msg.ok{ color:#2E7D4F; }
+
+  /* ---- Teklif hazırla: iki kolon ---- */
+  .quote-layout{ display:grid; grid-template-columns: minmax(340px, 460px) 1fr; gap:0; align-items:start; }
+  @media (max-width:980px){ .quote-layout{ grid-template-columns: 1fr; } }
+  .quote-form-col{ padding:24px 22px 60px; }
+  .quote-preview-col{ background:var(--bg); padding:24px 22px 60px; display:flex; justify-content:center; border-left:1px solid var(--line-soft); min-height:100vh; }
+  @media (max-width:980px){ .quote-preview-col{ border-left:none; min-height:0; } }
+  .sheet-outer{ width:100%; max-width:760px; }
+  .sheet-label{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:11.5px; color:var(--muted); margin-bottom:10px; letter-spacing:0.3px; }
+
+  .sheet-doc{ background:#fff; color:#14213D; width:100%; padding:46px 44px 40px; font-family:'Inter', var(--font-fallback); }
+  #sheet{ box-shadow:0 8px 30px rgba(20,33,61,0.16); }
+  .sh-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; }
+  .sh-brand{ display:flex; align-items:center; gap:12px; }
+  .sh-brand img.sh-logo{ height:52px; width:auto; display:block; }
+  .sh-brand-sub{ font-size:10.5px; color:#6B7383; font-family:'IBM Plex Mono', var(--mono-fallback); margin-top:1px; letter-spacing:0.4px; }
+  .sh-company-info{ text-align:right; font-size:11.5px; color:#3A4A6B; line-height:1.55; max-width:220px; }
+  .sh-title-row{ display:flex; justify-content:space-between; align-items:baseline; border-top:2px solid #14213D; border-bottom:1px solid #D9DCE1; padding:12px 0; margin-bottom:22px; }
+  .sh-title{ font-size:15.5px; font-weight:700; letter-spacing:0.2px; }
+  .sh-meta{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:11.5px; color:#3A4A6B; text-align:right; line-height:1.6; }
+  .sh-parties{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:26px; }
+  .sh-party-label{ font-size:10px; color:#6B7383; font-weight:600; margin-bottom:5px; }
+  .sh-party-name{ font-size:13.5px; font-weight:700; color:#14213D; }
+  .sh-party-sub{ font-size:11.5px; color:#3A4A6B; margin-top:2px; line-height:1.5; }
+  table.sh-table{ width:100%; border-collapse:collapse; margin-bottom:6px; }
+  table.sh-table thead th{ text-align:left; font-size:10.5px; font-weight:700; color:#fff; background:#14213D; padding:9px 8px; white-space:nowrap; }
+  table.sh-table thead th.num{ text-align:right; }
+  table.sh-table tbody td{ padding:9px 8px; font-size:12px; border-bottom:1px solid #E7E9EC; vertical-align:top; }
+  table.sh-table tbody td.num{ text-align:right; font-family:'IBM Plex Mono', var(--mono-fallback); white-space:nowrap; }
+  table.sh-table tbody .prod-name{ font-weight:600; color:#14213D; }
+  table.sh-table tbody .prod-desc{ font-size:10.8px; color:#6B7383; margin-top:2px; }
+  table.sh-table tbody tr:nth-child(even){ background:#FAFBFC; }
+  .sh-totals{ display:flex; justify-content:flex-end; margin-top:14px; }
+  .sh-totals-box{ width:260px; }
+  .sh-totals-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:12.5px; }
+  .sh-totals-row.grand{ border-top:2px solid #14213D; margin-top:4px; padding-top:10px; font-size:15.5px; font-weight:800; color:#14213D; }
+  .sh-totals-row .amt{ font-family:'IBM Plex Mono', var(--mono-fallback); }
+  .sh-notes{ margin-top:30px; font-size:11px; color:#3A4A6B; line-height:1.7; white-space:pre-wrap; }
+  .sh-notes-label{ font-size:10px; color:#6B7383; font-weight:700; margin-bottom:5px; }
+  .sh-footer{ margin-top:34px; padding-top:14px; border-top:1px solid #D9DCE1; display:flex; justify-content:space-between; font-size:10px; color:#8891A0; }
+  .sh-empty-hint{ font-size:12px; color:#8891A0; padding:14px 0; text-align:center; }
+
+  /* ---- modals ---- */
+  .modal-overlay{ position:fixed; inset:0; z-index:150; background:rgba(10,14,20,0.6); display:flex; align-items:flex-start; justify-content:center; padding:30px 16px; overflow-y:auto; }
+  .modal-box{ width:100%; max-width:420px; background:var(--paper); border-radius:10px; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
+  .modal-box-wide{ max-width:820px; padding:0; overflow:hidden; }
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .modal-box-wide .modal-header{ padding:16px 20px; margin-bottom:0; border-bottom:1px solid var(--line); }
+  .modal-title{ font-size:14.5px; font-weight:700; color:var(--ink); }
+  .modal-close{ background:none; border:none; font-size:18px; color:var(--muted); cursor:pointer; line-height:1; padding:4px; }
+  .modal-close:hover{ color:var(--ink); }
+  .modal-body-scroll{ max-height:70vh; overflow-y:auto; padding:20px; background:var(--bg); }
+  .modal-footer{ padding:14px 20px; border-top:1px solid var(--line); display:flex; align-items:center; gap:12px; }
+  .modal-footer .generate-btn{ width:auto; padding:11px 22px; }
+  .modal-footer .status-msg{ margin-top:0; }
+  /* ---- Offerta: çok şirketli ek stiller ---- */
+  .topbar .logo-badge img{ height:26px; max-width:120px; width:auto; object-fit:contain; display:block; }
+  .topbar .logo-initial{ width:26px; height:26px; border-radius:6px; background:var(--amber); color:#1a1200; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .topbar .tenant-name{ font-size:12.5px; color:#C7CEDC; padding-left:10px; border-left:1px solid #37415A; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @media (max-width:640px){ .topbar .tenant-name{ display:none; } }
+  #loading-view{ position:fixed; inset:0; z-index:90; background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; letter-spacing:0.3px; }
+  .gate-err.ok{ color:#2E7D4F; }
+  .gate-help{ margin-top:14px; font-size:11.5px; color:var(--muted); line-height:1.5; text-align:center; }
+  .sh-brand-name{ font-size:21px; font-weight:800; color:#14213D; letter-spacing:0.2px; }
+
+  .platform-wrap{ max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
+  .company-card{ border:1px solid var(--line); border-radius:10px; background:var(--paper); padding:16px 18px; margin-bottom:12px; }
+  .company-top{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .company-logo{ width:96px; height:56px; object-fit:contain; background:#fff; border:1px solid var(--line); border-radius:6px; padding:4px; }
+  .company-logo-empty{ width:96px; height:56px; border:1px dashed var(--line); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted); }
+  .company-info{ flex:1; min-width:180px; }
+  .company-name{ font-size:15px; font-weight:700; color:var(--ink); }
+  .company-meta{ font-size:12px; color:var(--muted); margin-top:3px; line-height:1.5; }
+  .badge{ display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px; vertical-align:middle; }
+  .badge.ok{ background:#E3F4EA; color:#1F6B3F; }
+  .badge.off{ background:#FBE5E3; color:#B3261E; }
+  .card-actions{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft); }
+
+  .modal-box-form{ max-width:660px; max-height:92vh; overflow-y:auto; }
+  .section-label{ font-size:12px; font-weight:700; color:var(--ink); margin:18px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .hint{ font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.5; }
+  .logo-row{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .logo-preview{ width:170px; height:84px; object-fit:contain; border:1px dashed var(--line); border-radius:6px; background:#fff; padding:4px; }
+  .logo-preview-empty{ width:170px; height:84px; border:1px dashed var(--line); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11.5px; color:var(--muted); }
+  .user-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; border:1px solid var(--line); border-radius:9px; background:var(--paper); padding:12px 14px; margin-bottom:8px; }
+  .user-row .u-main{ flex:1; min-width:170px; }
+  .user-row .u-name{ font-weight:700; font-size:14px; color:var(--ink); }
+  .user-row .u-meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .user-row .u-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+  .user-label{ cursor:pointer; text-decoration:underline dotted; }
+</style>
+</head>
+<body>
+
+<div id="gate" style="display:none;">
+  <div class="gate-box">
+    <h1>Offerta</h1>
+    <div class="gate-sub">Teklif yönetim sistemi — giriş yapın</div>
+    <div class="field">
+      <label for="loginCode">Şirket Kodu</label>
+      <input id="loginCode" autocomplete="organization" autocapitalize="none" spellcheck="false" placeholder="örn. sirketim" />
+    </div>
+    <div class="field">
+      <label for="loginUser">Kullanıcı Adı</label>
+      <input id="loginUser" autocomplete="username" autocapitalize="none" spellcheck="false" />
+    </div>
+    <div class="field">
+      <label for="loginPass">Şifre</label>
+      <input id="loginPass" type="password" autocomplete="current-password" />
+    </div>
+    <button class="gate-btn" id="loginBtn" type="button">Giriş Yap</button>
+    <div class="gate-err" id="loginErr"></div>
+    <div class="gate-help">Platform yöneticisi: şirket kodu olarak <b>platform</b> yazın.</div>
+
+    <div id="setupWrap" style="display:none; margin-top:18px; padding-top:16px; border-top:1px solid var(--line);">
+      <div style="font-weight:700; font-size:13px; color:var(--ink); margin-bottom:4px;">İlk kurulum</div>
+      <div class="gate-help" style="margin:0 0 10px; text-align:left;">Henüz platform yöneticisi yok. Cloudflare'de tanımladığınız <b>SETUP_TOKEN</b> değeriyle ilk yöneticiyi oluşturun.</div>
+      <div class="field"><label for="setupToken">Kurulum Anahtarı (SETUP_TOKEN)</label><input id="setupToken" type="password" autocomplete="off" /></div>
+      <div class="field"><label for="setupUser">Yönetici Kullanıcı Adı</label><input id="setupUser" autocomplete="off" autocapitalize="none" spellcheck="false" /></div>
+      <div class="field"><label for="setupPass">Yönetici Şifresi (en az 8 karakter)</label><input id="setupPass" type="password" autocomplete="new-password" /></div>
+      <button class="gate-btn" id="setupBtn" type="button">Yöneticiyi Oluştur</button>
+      <div class="gate-err" id="setupMsg"></div>
+    </div>
+  </div>
+</div>
+<div id="loading-view">Offerta yükleniyor…</div>
+
+<div id="app-content">
+
+<div class="topbar">
+  <div class="logo-badge" id="tenantBadge"></div>
+  <div class="word">Offerta</div>
+  <div class="tenant-name" id="tenantName"></div>
+  <div class="tag" id="screenTitleTag">Ana Menü</div>
+  <div class="topbar-right">
+    <div class="cloud-status" id="cloudStatus" title=""><span class="cs-dot"></span><span class="cs-text">Bağlanıyor…</span></div>
+    <button class="back-btn" id="exitImpersonateBtn" type="button" style="display:none;">← Yönetim Paneli</button>
+    <button class="back-btn" id="backHomeBtn" type="button" style="display:none;">← Ana Menü</button>
+    <span class="user-label" id="userLabel" title="Şifre değiştir"></span>
+    <button class="back-btn" id="logoutBtn" type="button">Çıkış</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ================= ANA MENÜ ================= -->
+  <div class="screen active" id="screen-home">
+    <div class="menu-screen">
+      <div class="menu-hello">Offerta</div>
+      <div class="menu-sub">Ne yapmak istiyorsunuz?</div>
+      <div class="menu-grid">
+        <button class="menu-card" data-screen="quote" type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Teklif Hazırla</div>
+          <div class="mc-desc">Müşteri ve ürün bilgilerini girip yeni bir fiyat teklifi oluşturun, önizleyin ve PDF indirin.</div>
+        </button>
+        <button class="menu-card" data-screen="history" type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Geçmiş Teklifler</div>
+          <div class="mc-desc">Daha önce oluşturulmuş tüm teklifleri görüntüleyin, PDF olarak tekrar indirin.</div>
+          <div class="mc-count" id="menuHistoryCount"></div>
+        </button>
+        <button class="menu-card" data-screen="customers" type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Müşteri Girişi</div>
+          <div class="mc-desc">Sık teklif verdiğiniz müşterileri kaydedin, teklif hazırlarken listeden seçin.</div>
+          <div class="mc-count" id="menuCustomerCount"></div>
+        </button>
+        <button class="menu-card" data-screen="products" type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Ürün Girişi</div>
+          <div class="mc-desc">Ürünleri alış fiyatı ve kâr marjıyla kaydedin, teklife tek tıkla ekleyin.</div>
+          <div class="mc-count" id="menuProductCount"></div>
+        </button>
+        <button class="menu-card" data-screen="settings" data-admin-only type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Şirket Ayarları</div>
+          <div class="mc-desc">Firma bilgileri, logo, varsayılan teklif ayarları ve işlem şifresi.</div>
+        </button>
+        <button class="menu-card" data-screen="users" data-admin-only type="button">
+          <div class="mc-bars"><span style="height:20px;"></span><span style="height:12px;"></span><span style="height:17px;"></span><span style="height:9px;"></span></div>
+          <div class="mc-title">Kullanıcılar</div>
+          <div class="mc-desc">Şirketinize kullanıcı ekleyin, şifre sıfırlayın, kullanıcıları pasifleştirin.</div>
+          <div class="mc-count" id="menuUserCount"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MÜŞTERİ GİRİŞİ ================= -->
+  <div class="screen" id="screen-customers">
+    <div class="form-screen">
+      <div class="screen-title">Müşteri Girişi</div>
+      <div class="screen-sub">Yeni müşteri kaydedin veya kayıtlı müşterileri yönetin.</div>
+      <button class="picker-btn" id="backToQuoteFromCustomersBtn" type="button" style="margin-bottom:20px;">← Teklife Dön</button>
+
+      <div class="field"><label for="custFormName">Firma / Müşteri Adı</label><input id="custFormName" autocomplete="off" placeholder="Örn. ABC Perakende A.Ş." /></div>
+      <div class="row2">
+        <div class="field"><label for="custFormContact">Yetkili</label><input id="custFormContact" autocomplete="off" placeholder="Örn. Ahmet Yılmaz" /></div>
+        <div class="field"><label for="custFormPhone">Telefon</label><input id="custFormPhone" autocomplete="off" placeholder="0 5xx xxx xx xx" /></div>
+      </div>
+      <div class="field"><label for="custFormEmail">E-posta</label><input id="custFormEmail" autocomplete="off" placeholder="ornek@firma.com" /></div>
+      <div class="generate-wrap" style="margin-top:6px;">
+        <button class="generate-btn" id="saveCustomerBtn" type="button">Müşteriyi Kaydet</button>
+        <button class="picker-btn" id="cancelCustomerEditBtn" type="button" style="display:none; width:100%; margin-top:8px;">Düzenlemeyi İptal Et</button>
+        <div class="status-msg" id="customerFormStatus"></div>
+      </div>
+
+      <h2 style="margin-top:34px;">Kayıtlı Müşteriler <span id="custListCount" style="color:var(--muted); font-weight:500;"></span></h2>
+      <div id="customersListWrap">
+        <div class="empty-hint" id="customersEmpty">Henüz müşteri eklenmedi.</div>
+        <table class="data-table" id="customersTable" style="display:none;">
+          <thead><tr><th>Firma</th><th>Yetkili</th><th>Telefon</th><th>E-posta</th><th></th></tr></thead>
+          <tbody id="customersTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ÜRÜN GİRİŞİ ================= -->
+  <div class="screen" id="screen-products">
+    <div class="form-screen">
+      <div class="screen-title">Ürün Girişi</div>
+      <div class="screen-sub">Ürün kataloğunuza yeni ürün ekleyin veya mevcutları yönetin.</div>
+      <button class="picker-btn" id="backToQuoteFromProductsBtn" type="button" style="margin-bottom:20px;">← Teklife Dön</button>
+
+      <div class="field"><label for="prodFormName">Ürün / Model Adı</label><input id="prodFormName" autocomplete="off" placeholder="Örn. Masaüstü Barkod Okuyucu" /></div>
+      <div class="field"><label for="prodFormDesc">Açıklama (opsiyonel)</label><input id="prodFormDesc" autocomplete="off" placeholder="Örn. Kablosuz, 2D imager, USB dock dahil" /></div>
+      <div class="row3">
+        <div class="field"><label for="prodFormPrice">Alış Fiyatı</label><input id="prodFormPrice" type="number" autocomplete="off" min="0" step="0.01" /></div>
+        <div class="field"><label for="prodFormMargin">% Kâr Marjı</label><input id="prodFormMargin" type="number" autocomplete="off" value="12" min="0" step="0.5" /></div>
+        <div class="field"><label for="prodFormCurrency">Para Birimi</label>
+          <select id="prodFormCurrency">
+            <option value="TL" selected>₺ TL</option>
+            <option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option>
+          </select>
+        </div>
+      </div>
+      <div class="generate-wrap" style="margin-top:6px;">
+        <button class="generate-btn" id="saveProductBtn" type="button">Ürünü Kaydet</button>
+        <button class="picker-btn" id="cancelProductEditBtn" type="button" style="display:none; width:100%; margin-top:8px;">Düzenlemeyi İptal Et</button>
+        <div class="status-msg" id="productFormStatus"></div>
+      </div>
+
+      <h2 style="margin-top:34px;">Kayıtlı Ürünler <span id="prodListCount" style="color:var(--muted); font-weight:500;"></span></h2>
+      <div id="productsListWrap">
+        <div class="empty-hint" id="productsEmpty">Henüz ürün eklenmedi.</div>
+        <table class="data-table" id="productsTable" style="display:none;">
+          <thead><tr><th>Ürün</th><th class="num">Alış Fiyatı</th><th class="num">% Marj</th><th>Para B.</th><th></th></tr></thead>
+          <tbody id="productsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TEKLİF HAZIRLA ================= -->
+  <div class="screen" id="screen-quote">
+    <div class="quote-layout">
+      <div class="quote-form-col panel">
+
+        <h2>Firma Bilgileri (Teklifi Veren)</h2>
+        <div class="hint" style="margin:-4px 0 10px;">Bu bilgiler "Şirket Ayarları" bölümünden yönetilir.</div>
+        <div class="field"><label for="companyName">Firma Adı</label><input id="companyName" autocomplete="off" readonly /></div>
+        <div class="field"><label for="companyAddr">Adres</label><textarea id="companyAddr" autocomplete="off" readonly></textarea></div>
+        <div class="row2">
+          <div class="field"><label for="companyPhone">Telefon</label><input id="companyPhone" autocomplete="off" readonly /></div>
+          <div class="field"><label for="companyEmail">E-posta</label><input id="companyEmail" autocomplete="off" readonly /></div>
+        </div>
+        <div class="field"><label for="companyTax">Vergi Dairesi / No</label><input id="companyTax" autocomplete="off" readonly /></div>
+
+        <h2>Teklif Bilgileri</h2>
+        <div class="row2">
+          <div class="field"><label for="offerNo">Teklif No <span style="font-weight:400;">(otomatik)</span></label><input id="offerNo" autocomplete="off" value="" /></div>
+          <div class="field"><label for="offerDate">Tarih</label><input id="offerDate" type="date" autocomplete="off" /></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="validity">Geçerlilik (gün)</label><input id="validity" type="number" autocomplete="off" value="15" min="1" /></div>
+          <div class="field"><label for="currency">Para Birimi</label>
+            <select id="currency">
+              <option value="TL" selected>₺ Türk Lirası</option>
+              <option value="USD">$ ABD Doları</option>
+              <option value="EUR">€ Euro</option>
+            </select>
+          </div>
+        </div>
+        <div class="row3">
+          <div class="field"><label for="preparedBy">Hazırlayan</label><input id="preparedBy" autocomplete="off" placeholder="Ad Soyad" /></div>
+          <div class="field"><label for="preparedByPhone">Hazırlayan Telefon</label><input id="preparedByPhone" autocomplete="off" placeholder="0 5xx xxx xx xx" /></div>
+          <div class="field"><label for="preparedByEmail">Hazırlayan E-posta</label><input id="preparedByEmail" autocomplete="off" placeholder="ornek@sirketiniz.com" /></div>
+        </div>
+
+        <h2>Müşteri Bilgileri</h2>
+        <div class="field">
+          <label for="custPicker">Kayıtlı Müşteri</label>
+          <select id="custPicker"><option value="">— Seçiniz veya alttan yeni girin —</option></select>
+        </div>
+        <div class="field"><label for="custName">Firma / Müşteri Adı</label><input id="custName" autocomplete="off" placeholder="Örn. ABC Perakende A.Ş." /></div>
+        <div class="row2">
+          <div class="field"><label for="custContact">Yetkili</label><input id="custContact" autocomplete="off" placeholder="Örn. Ahmet Yılmaz" /></div>
+          <div class="field"><label for="custPhone">Telefon</label><input id="custPhone" autocomplete="off" placeholder="0 5xx xxx xx xx" /></div>
+        </div>
+        <div class="field"><label for="custEmail">E-posta</label><input id="custEmail" autocomplete="off" placeholder="ornek@firma.com" /></div>
+        <div style="margin-bottom:12px;"><button class="picker-btn" id="goToCustomersBtn" type="button" style="width:100%;">+ Müşteri Girişi menüsüne git</button></div>
+
+        <h2>Ürünler</h2>
+        <div class="picker-row">
+          <div class="field">
+            <label for="prodPicker">Kayıtlı Ürün</label>
+            <select id="prodPicker"><option value="">— Kataloğdan seçin —</option></select>
+          </div>
+          <button class="picker-btn" id="addFromCatalogBtn" type="button">Listeye Ekle</button>
+        </div>
+        <div id="itemsWrap"></div>
+        <button class="add-btn" id="addItemBtn" type="button">+ Boş Ürün Satırı Ekle</button>
+        <button class="add-btn" id="goToProductsBtn" type="button" style="margin-top:8px;">+ Ürün Girişi menüsüne git</button>
+
+        <h2>Vergi ve Notlar</h2>
+        <div class="field"><label for="vatRate">KDV Oranı (%)</label><input id="vatRate" type="number" autocomplete="off" value="20" min="0" step="0.5" /></div>
+        <div class="field"><label for="terms">Ödeme / Teslimat Koşulları</label><textarea id="terms" autocomplete="off"></textarea></div>
+        <div class="field"><label for="notes">Ek Notlar (opsiyonel)</label><textarea id="notes" autocomplete="off" placeholder="Örn. Garanti süresi, kurulum, IBAN vb."></textarea></div>
+
+        <div class="generate-wrap">
+          <button class="generate-btn" id="createBtn" type="button">Teklifi Oluştur</button>
+          <button class="picker-btn" id="cancelQuoteEditBtn" type="button" style="display:none; width:100%; margin-top:8px;">Düzenlemeyi İptal Et</button>
+          <div class="status-msg" id="statusMsg"></div>
+        </div>
+      </div>
+
+      <div class="quote-preview-col">
+        <div class="sheet-outer">
+          <div class="sheet-label">CANLI ÖNİZLEME</div>
+          <div id="sheet" class="sheet-doc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ŞİRKET AYARLARI ================= -->
+  <div class="screen" id="screen-settings">
+    <div class="form-screen">
+      <div class="screen-title">Şirket Ayarları</div>
+      <div class="screen-sub">Teklif belgelerinde görünen firma bilgileri ve varsayılan değerler.</div>
+
+      <div class="section-label" style="margin-top:0;">Firma bilgileri</div>
+      <div class="field"><label for="stName">Firma Adı</label><input id="stName" autocomplete="off" /></div>
+      <div class="field"><label for="stAddr">Adres</label><textarea id="stAddr" autocomplete="off"></textarea></div>
+      <div class="row2">
+        <div class="field"><label for="stPhone">Telefon</label><input id="stPhone" autocomplete="off" /></div>
+        <div class="field"><label for="stEmail">E-posta</label><input id="stEmail" autocomplete="off" /></div>
+      </div>
+      <div class="field"><label for="stTax">Vergi Dairesi / No</label><input id="stTax" autocomplete="off" /></div>
+
+      <div class="section-label">Logo</div>
+      <div class="logo-row">
+        <div id="stLogoBox"><div class="logo-preview-empty">Logo yok</div></div>
+        <div>
+          <input type="file" id="stLogoFile" accept=".pdf,.gif,.jpg,.jpeg,.png,application/pdf,image/gif,image/jpeg,image/png" />
+          <div class="hint">PDF, GIF, JPG veya PNG yükleyebilirsiniz. Otomatik küçültülür ve boşlukları kırpılır.</div>
+          <button class="del-btn" id="stLogoRemove" type="button" style="margin:8px 0 0;">Logoyu kaldır</button>
+        </div>
+      </div>
+
+      <div class="section-label">Varsayılan teklif ayarları</div>
+      <div class="row3">
+        <div class="field"><label for="stPrefix">Teklif No Öneki</label><input id="stPrefix" autocomplete="off" maxlength="8" /></div>
+        <div class="field"><label for="stVat">KDV (%)</label><input id="stVat" type="number" min="0" step="0.5" /></div>
+        <div class="field"><label for="stValidity">Geçerlilik (gün)</label><input id="stValidity" type="number" min="1" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="stCurrency">Para Birimi</label>
+          <select id="stCurrency"><option value="TL">₺ TL</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select>
+        </div>
+        <div class="field"><label for="stPin">İşlem Şifresi (silme/durum değiştirme)</label><input id="stPin" autocomplete="off" /></div>
+      </div>
+      <div class="field"><label for="stTerms">Ödeme / Teslimat Koşulları</label><textarea id="stTerms" autocomplete="off"></textarea></div>
+      <div class="field"><label for="stNotes">Ek Notlar (IBAN vb.)</label><textarea id="stNotes" autocomplete="off"></textarea></div>
+      <div class="hint">İşlem şifresi boş bırakılırsa silme ve durum değiştirme işlemlerini yalnızca yöneticiler yapabilir.</div>
+
+      <div class="generate-wrap" style="margin-top:6px;">
+        <button class="generate-btn" id="saveSettingsBtn" type="button">Ayarları Kaydet</button>
+        <div class="status-msg" id="settingsStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= KULLANICILAR ================= -->
+  <div class="screen" id="screen-users">
+    <div class="list-screen">
+      <div class="screen-title">Kullanıcılar <span id="userCount" style="color:var(--muted); font-weight:500; font-size:14px;"></span></div>
+      <div class="screen-sub">Bu şirkette teklif hazırlayabilecek kişiler. Giriş: şirket kodu + kullanıcı adı + şifre.</div>
+      <button class="generate-btn" id="addUserBtn" type="button" style="width:auto; padding:11px 20px;">+ Kullanıcı Ekle</button>
+      <div class="status-msg" id="usersStatus"></div>
+      <div id="usersList" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- ================= GEÇMİŞ TEKLİFLER ================= -->
+  <div class="screen" id="screen-history">
+    <div class="list-screen">
+      <div class="screen-title">Geçmiş Teklifler <span id="archiveCount" style="color:var(--muted); font-weight:500; font-size:14px;"></span></div>
+      <div class="screen-sub">Hangi firmaya ne teklif verildiğinin özeti. Görüntüle'ye basarak PDF'i tekrar indirebilirsiniz.</div>
+      <div id="archiveWrap">
+        <div class="empty-hint" id="archiveEmpty">Henüz oluşturulmuş bir teklif yok.</div>
+        <div id="archiveList" style="display:none;"></div>
+        <button class="del-btn" id="clearArchiveBtn" type="button" style="display:none; margin-top:10px;">Geçmişi Temizle</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /app-content -->
+
+<!-- ================= PLATFORM YÖNETİM PANELİ ================= -->
+<div id="platform-content" style="display:none;">
+  <div class="topbar">
+    <div class="logo-badge"><div class="logo-initial">O</div></div>
+    <div class="word">Offerta</div>
+    <div class="tag">Yönetim Paneli</div>
+    <div class="topbar-right">
+      <span class="user-label" id="platformUser" title="Şifre değiştir"></span>
+      <button class="back-btn" id="platformLogoutBtn" type="button">Çıkış</button>
+    </div>
+  </div>
+  <div class="platform-wrap">
+    <div class="screen-title">Şirketler <span id="companyCount" style="color:var(--muted); font-weight:500; font-size:14px;"></span></div>
+    <div class="screen-sub">Offerta'yı kullanan şirketler. Her şirketin müşterileri, ürünleri ve teklifleri birbirinden ayrıdır.</div>
+    <button class="generate-btn" id="addCompanyBtn" type="button" style="width:auto; padding:12px 22px;">+ Şirket Ekle</button>
+    <div class="status-msg" id="platformStatus"></div>
+    <div id="companyList" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- Şirket ekle / düzenle -->
+<div class="modal-overlay" id="companyModal" style="display:none;">
+  <div class="modal-box modal-box-form">
+    <div class="modal-header">
+      <div class="modal-title" id="cfTitle">Şirket Ekle</div>
+      <button class="modal-close" id="cfClose" type="button">✕</button>
+    </div>
+
+    <div id="cfTemplateWrap">
+      <div class="field">
+        <label for="cfTemplate">Şablon dosyasından doldur (.json) — opsiyonel</label>
+        <input type="file" id="cfTemplate" accept=".json,application/json" />
+        <div class="hint">Hazır bir şirket bilgi dosyası: tüm alanları ve logoyu tek seferde doldurur.</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:6px;">Firma bilgileri</div>
+    <div class="field"><label for="cfName">Firma Adı *</label><input id="cfName" autocomplete="off" /></div>
+    <div class="row2">
+      <div class="field"><label for="cfCode">Şirket Kodu * (girişte kullanılır)</label><input id="cfCode" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="örn. sirketim" /></div>
+      <div class="field"><label for="cfPrefix">Teklif No Öneki</label><input id="cfPrefix" autocomplete="off" maxlength="8" placeholder="örn. UMV" /></div>
+    </div>
+    <div class="field"><label for="cfAddr">Adres</label><textarea id="cfAddr" autocomplete="off"></textarea></div>
+    <div class="row2">
+      <div class="field"><label for="cfPhone">Telefon</label><input id="cfPhone" autocomplete="off" /></div>
+      <div class="field"><label for="cfEmail">E-posta</label><input id="cfEmail" autocomplete="off" /></div>
+    </div>
+    <div class="field"><label for="cfTax">Vergi Dairesi / No</label><input id="cfTax" autocomplete="off" /></div>
+
+    <div class="section-label">Logo</div>
+    <div class="logo-row">
+      <div id="cfLogoBox"><div class="logo-preview-empty">Logo yok</div></div>
+      <div>
+        <input type="file" id="cfLogoFile" accept=".pdf,.gif,.jpg,.jpeg,.png,application/pdf,image/gif,image/jpeg,image/png" />
+        <div class="hint">PDF, GIF, JPG veya PNG. Otomatik küçültülür ve boşlukları kırpılır.</div>
+        <button class="del-btn" id="cfLogoRemove" type="button" style="margin:8px 0 0;">Logoyu kaldır</button>
+      </div>
+    </div>
+
+    <div class="section-label">Varsayılan teklif ayarları</div>
+    <div class="row3">
+      <div class="field"><label for="cfVat">KDV (%)</label><input id="cfVat" type="number" min="0" step="0.5" value="20" /></div>
+      <div class="field"><label for="cfValidity">Geçerlilik (gün)</label><input id="cfValidity" type="number" min="1" value="15" /></div>
+      <div class="field"><label for="cfCurrency">Para Birimi</label>
+        <select id="cfCurrency"><option value="TL">₺ TL</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select>
+      </div>
+    </div>
+    <div class="field"><label for="cfTerms">Ödeme / Teslimat Koşulları</label><textarea id="cfTerms" autocomplete="off"></textarea></div>
+    <div class="field"><label for="cfNotes">Ek Notlar (IBAN vb.)</label><textarea id="cfNotes" autocomplete="off"></textarea></div>
+    <div class="field"><label for="cfPin">İşlem Şifresi (silme/durum değiştirme) — opsiyonel</label><input id="cfPin" autocomplete="off" /></div>
+
+    <div id="cfStatusSection" style="display:none;">
+      <div class="section-label">Durum</div>
+      <div class="field"><label for="cfStatus">Hesap durumu</label>
+        <select id="cfStatus"><option value="active">Aktif</option><option value="suspended">Askıda (girişe kapalı)</option></select>
+      </div>
+    </div>
+
+    <div id="cfAdminSection">
+      <div class="section-label">Şirket yöneticisi (admin) girişi</div>
+      <div class="row2">
+        <div class="field"><label for="cfAdminUser">Kullanıcı Adı *</label><input id="cfAdminUser" autocomplete="off" autocapitalize="none" spellcheck="false" /></div>
+        <div class="field"><label for="cfAdminPass">Şifre * (en az 6 karakter)</label><input id="cfAdminPass" type="text" autocomplete="off" /></div>
+      </div>
+      <div class="field"><label for="cfAdminName">Yönetici Ad Soyad</label><input id="cfAdminName" autocomplete="off" /></div>
+      <div class="hint">Şirket bu bilgilerle giriş yapar: şirket kodu + kullanıcı adı + şifre.</div>
+    </div>
+
+    <div class="generate-wrap" style="margin-top:6px;">
+      <button class="generate-btn" id="cfSave" type="button">Kaydet</button>
+      <div class="status-msg" id="cfMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hesabım: şifre değiştir -->
+<div class="modal-overlay" id="accountModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Şifre Değiştir</div>
+      <button class="modal-close" id="acClose" type="button">✕</button>
+    </div>
+    <div class="hint" id="acWho" style="margin-bottom:10px;"></div>
+    <div class="field"><label for="acCurrent">Mevcut Şifre</label><input id="acCurrent" type="password" autocomplete="current-password" /></div>
+    <div class="field"><label for="acNew">Yeni Şifre (en az 6 karakter)</label><input id="acNew" type="password" autocomplete="new-password" /></div>
+    <div class="field"><label for="acNew2">Yeni Şifre (tekrar)</label><input id="acNew2" type="password" autocomplete="new-password" /></div>
+    <button class="generate-btn" id="acSave" type="button">Şifreyi Değiştir</button>
+    <div class="status-msg" id="acMsg"></div>
+  </div>
+</div>
+
+<!-- Kullanıcı ekle / şifre sıfırla -->
+<div class="modal-overlay" id="userModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="usTitle">Kullanıcı Ekle</div>
+      <button class="modal-close" id="usClose" type="button">✕</button>
+    </div>
+    <div id="usIdentity">
+      <div class="field"><label for="usName">Kullanıcı Adı * (küçük harf, rakam, . _ -)</label><input id="usName" autocomplete="off" autocapitalize="none" spellcheck="false" /></div>
+      <div class="field"><label for="usDisplay">Ad Soyad * (tekliflerde "Hazırlayan" olarak görünür)</label><input id="usDisplay" autocomplete="off" /></div>
+      <div class="field" id="usRoleWrap" style="display:none;"><label for="usRole">Rol</label>
+        <select id="usRole"><option value="user">Kullanıcı</option><option value="admin">Yönetici (admin)</option></select>
+      </div>
+    </div>
+    <div class="field"><label for="usPass">Şifre * (en az 6 karakter)</label><input id="usPass" type="text" autocomplete="off" /></div>
+    <button class="generate-btn" id="usSave" type="button">Kaydet</button>
+    <div class="status-msg" id="usMsg"></div>
+  </div>
+</div>
+
+<!-- Teklif Önizleme / PDF modal -->
+<div class="modal-overlay" id="previewModal" style="display:none;">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <div class="modal-title" id="previewModalTitle">Teklif Önizleme</div>
+      <button class="modal-close" id="previewModalClose" type="button">✕</button>
+    </div>
+    <div class="modal-body-scroll">
+      <div id="modalSheet" class="sheet-doc" style="box-shadow:0 4px 20px rgba(20,33,61,0.12); max-width:720px; margin:0 auto;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="generate-btn" id="modalDownloadBtn" type="button">PDF İndir</button>
+      <div class="status-msg" id="modalStatusMsg"></div>
+    </div>
+  </div>
+</div>
+
+
+<style>
+  #gate{ position:fixed; inset:0; z-index:100; background:var(--ink); display:flex; align-items:center; justify-content:center; padding:20px; }
+  #gate .gate-box{ width:100%; max-width:340px; background:var(--paper); border-radius:10px; padding:30px 26px 26px; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
+  #gate .gate-brand{ display:flex; justify-content:center; margin-bottom:18px; }
+  #gate .gate-brand img{ height:40px; width:auto; }
+  #gate h1{ font-size:21px; text-align:center; margin:0 0 4px; color:var(--ink); font-weight:800; letter-spacing:0.2px; }
+  #gate .gate-sub{ text-align:center; font-size:13px; color:var(--muted); margin-bottom:20px; }
+  #gate .field{ margin-bottom:12px; }
+  #gate .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+  #gate .field input{ width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font-size:14px; font-family:inherit; }
+  #gate .field input:focus{ outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber); }
+  #gate .gate-btn{ width:100%; margin-top:6px; padding:12px; border:none; border-radius:7px; background:var(--amber); color:#1a1200; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
+  #gate .gate-err{ color:var(--danger); font-size:12.5px; margin-top:10px; text-align:center; min-height:16px; }
+  #app-content{ display:none; }
+  #app-content.unlocked{ display:block; }
+</style>
+
+<script>
+(function(){
+  var CUR_SYMBOL = { TL:'₺', USD:'$', EUR:'€' };
+  var itemsWrap = document.getElementById('itemsWrap');
+  var itemCount = 0;
+  var items = [];
+  var currentUser = null;
+
+  // ================= Ekran gezinme =================
+  var SCREEN_TITLES = { home:'Ana Menü', quote:'Teklif Hazırla', history:'Geçmiş Teklifler', customers:'Müşteri Girişi', products:'Ürün Girişi', settings:'Şirket Ayarları', users:'Kullanıcılar' };
+  function showScreen(name){
+    if ((name === 'settings' || name === 'users') && !isTenantAdmin()) name = 'home';
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    var target = document.getElementById('screen-' + name);
+    if (target) target.classList.add('active');
+    document.getElementById('screenTitleTag').textContent = SCREEN_TITLES[name] || '';
+    document.getElementById('backHomeBtn').style.display = (name === 'home') ? 'none' : '';
+    if (name === 'settings') fillSettingsForm();
+    if (name === 'users') ensureUsersListener();
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('.menu-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      var target = card.getAttribute('data-screen');
+      if (target === 'quote') resetQuoteSelections();
+      showScreen(target);
+    });
+  });
+  document.getElementById('backHomeBtn').addEventListener('click', function(){ showScreen('home'); });
+  document.getElementById('goToCustomersBtn').addEventListener('click', function(){ showScreen('customers'); });
+  document.getElementById('goToProductsBtn').addEventListener('click', function(){ showScreen('products'); });
+  document.getElementById('backToQuoteFromCustomersBtn').addEventListener('click', function(){ showScreen('quote'); });
+  document.getElementById('backToQuoteFromProductsBtn').addEventListener('click', function(){ showScreen('quote'); });
+
+  function resetQuoteSelections(){
+    if (editingQuoteRef) {
+      editingQuoteRef = null;
+      offerNoUserEdited = false;
+      document.getElementById('createBtn').textContent = 'Teklifi Oluştur';
+      document.getElementById('cancelQuoteEditBtn').style.display = 'none';
+      advanceOfferNoField();
+    }
+    document.getElementById('custPicker').value = '';
+    document.getElementById('custName').value = '';
+    document.getElementById('custContact').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custEmail').value = '';
+    document.getElementById('prodPicker').value = '';
+    items = [];
+    itemsWrap.innerHTML = '';
+    recalc();
+  }
+
+  // ================= Veri önbellekleri =================
+  var cloudReady = false;
+  var customersColRef = null, productsColRef = null, quotesColRef = null;
+  var offerNoUserEdited = false;
+  var customersCache = [];
+  var productsCache = [];
+  var archiveCache = [];
+
+  // ================= Offerta çekirdeği: Cloudflare Worker API =================
+  var RESERVED_CODES = ['platform','admin','offerta','api','www','login','yonetim','test','app'];
+  var PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  var PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  var TENANT = { id: null, data: null, logo: '' };
+  var AUTH = { user: null, isPlatform: false, profile: null, impersonating: false };
+  var profileCache = null;      // sunucudaki kişisel tercihler (hazırlayan adı/telefon/e-posta)
+  var pendingPin = '';          // bir sonraki API çağrısına eklenecek işlem şifresi
+  var lastRev = null, syncTimer = null;
+
+  function gid(id){ return document.getElementById(id); }
+  function hardReload(){ if (typeof window.__testReload === 'function') { window.__testReload(); return; } location.reload(); }
+  function isTenantAdmin(){ return AUTH.impersonating || !!(AUTH.profile && AUTH.profile.role === 'admin'); }
+  function tenantCompany(){ return (TENANT.data && TENANT.data.company) || {}; }
+  function tenantSettings(){ return (TENANT.data && TENANT.data.settings) || {}; }
+  function friendlyErr(err){ return (err && err.message) ? err.message : String(err); }
+
+  // ---- API istemcisi (arayüz ve API farklı adreslerde olabilir: GitHub Pages + workers.dev) ----
+  var API_BASE = (typeof window.__API_BASE === 'string') ? window.__API_BASE : String((document.querySelector('meta[name="offerta-api"]') || {}).content || '').replace(/\/$/, '');
+  var TOKEN_KEY = 'offerta_token';
+  function getToken(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(t){ try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+  function api(method, path, body){
+    var opts = { method: method, headers: { 'x-offerta': '1' } };
+    var tk = getToken(); if (tk) opts.headers.authorization = 'Bearer ' + tk;
+    if (body !== undefined) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    if (pendingPin) { opts.headers['x-pin'] = pendingPin; pendingPin = ''; }
+    return fetch(API_BASE + path, opts).then(function(res){
+      return res.text().then(function(t){
+        var data = null; try { data = t ? JSON.parse(t) : null; } catch (e) {}
+        if (!res.ok) {
+          var err = new Error((data && data.error) || ('Sunucu hatası (' + res.status + ')'));
+          err.status = res.status; err.data = data;
+          if (res.status === 401 && AUTH.user && path !== '/api/login') sessionLost('Oturumunuz sona erdi. Lütfen yeniden giriş yapın.');
+          throw err;
+        }
+        return data;
+      });
+    }, function(){ var e = new Error('Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.'); e.network = true; throw e; });
+  }
+  function sessionLost(msg){
+    AUTH.user = null; stopSync(); setToken('');
+    try { sessionStorage.setItem('offerta_msg', msg); } catch (e) {}
+    hardReload();
+  }
+
+  // ---- Bağlantı durumu göstergesi ----
+  var cloudStatusKind = 'pending', cloudStatusMsg = '';
+  function setCloudStatus(kind, msg){
+    cloudStatusKind = kind; cloudStatusMsg = msg || '';
+    var el = gid('cloudStatus'); if (!el) return;
+    var colors = { ok:'#3FB36B', pending:'#E0A52B', off:'#E5484D' };
+    var labels = { ok:'Bağlı', pending:'Bağlanıyor…', off:'Bağlantı sorunu' };
+    el.querySelector('.cs-dot').style.background = colors[kind] || colors.off;
+    el.querySelector('.cs-text').textContent = labels[kind] || labels.off;
+    el.title = msg || (kind === 'ok' ? 'Veriler sunucudan canlı okunuyor.' : '');
+  }
+  gid('cloudStatus').addEventListener('click', function(){
+    var lines = ['Bağlantı durumu: ' + (cloudStatusKind === 'ok' ? 'Bağlı' : cloudStatusKind === 'pending' ? 'Bağlanıyor…' : 'Bağlantı sorunu')];
+    if (cloudStatusMsg) lines.push('Ayrıntı: ' + cloudStatusMsg);
+    if (cloudStatusKind === 'off') lines.push('', 'İnternet bağlantınızı kontrol edin; sorun sürerse sayfayı Cmd+Shift+R ile yenileyin.');
+    alert(lines.join('\n'));
+  });
+
+  // ---- Görünüm yönetimi ----
+  function showView(name){
+    gid('gate').style.display = (name === 'login') ? 'flex' : 'none';
+    gid('loading-view').style.display = (name === 'loading') ? 'flex' : 'none';
+    gid('platform-content').style.display = (name === 'platform') ? 'block' : 'none';
+    var app = gid('app-content');
+    if (name === 'app') app.classList.add('unlocked'); else app.classList.remove('unlocked');
+    if (name === 'login') setLoginBusy(false);
+  }
+
+  // ---- Giriş ve ilk kurulum ----
+  function setLoginError(msg){ gid('loginErr').textContent = msg || ''; }
+  function setLoginBusy(b){ var btn = gid('loginBtn'); btn.disabled = !!b; btn.textContent = b ? 'Giriş yapılıyor…' : 'Giriş Yap'; }
+  function loginSubmit(){
+    setLoginError('');
+    var code = gid('loginCode').value.trim().toLowerCase(), uname = gid('loginUser').value.trim().toLowerCase(), pass = gid('loginPass').value;
+    if (!code) { setLoginError('Şirket kodu gerekli.'); return; }
+    if (!uname || !pass) { setLoginError('Kullanıcı adı ve şifre gerekli.'); return; }
+    setLoginBusy(true);
+    api('POST', '/api/login', { code: code, username: uname, password: pass }).then(function(me){
+      try { localStorage.setItem('offerta_last_code', code); } catch (e) {}
+      gid('loginPass').value = '';
+      setToken(me.token);
+      startSession(me);
+    }).catch(function(err){ setLoginError(err.message); setLoginBusy(false); });
+  }
+  gid('loginBtn').addEventListener('click', loginSubmit);
+  gid('loginPass').addEventListener('keydown', function(e){ if (e.key === 'Enter') loginSubmit(); });
+  gid('loginUser').addEventListener('keydown', function(e){ if (e.key === 'Enter') gid('loginPass').focus(); });
+  gid('loginCode').addEventListener('keydown', function(e){ if (e.key === 'Enter') gid('loginUser').focus(); });
+
+  function setupMsg(msg, cls){ var el = gid('setupMsg'); el.textContent = msg || ''; el.className = 'gate-err' + (cls ? ' ' + cls : ''); }
+  gid('setupBtn').addEventListener('click', function(){
+    var token = gid('setupToken').value, uname = gid('setupUser').value.trim().toLowerCase(), pass = gid('setupPass').value;
+    if (!token || !uname || !pass) { setupMsg('Üç alanı da doldurun.'); return; }
+    var btn = gid('setupBtn'); btn.disabled = true; setupMsg('Oluşturuluyor…');
+    api('POST', '/api/setup', { token: token, username: uname, password: pass }).then(function(){
+      return api('POST', '/api/login', { code: 'platform', username: uname, password: pass });
+    }).then(function(me){ setToken(me.token); gid('setupWrap').style.display = 'none'; startSession(me); })
+      .catch(function(err){ setupMsg(err.message); btn.disabled = false; });
+  });
+  function checkSetupNeeded(){
+    api('GET', '/api/setup/status').then(function(s){ gid('setupWrap').style.display = s && s.needed ? 'block' : 'none'; }).catch(function(){});
+  }
+
+  function doLogout(){
+    stopSync();
+    try { sessionStorage.removeItem('offerta_msg'); } catch (e) {}
+    var done = function(){ setToken(''); hardReload(); };
+    api('POST', '/api/logout').then(done, done);
+  }
+  gid('logoutBtn').addEventListener('click', doLogout);
+  gid('platformLogoutBtn').addEventListener('click', doLogout);
+  gid('exitImpersonateBtn').addEventListener('click', function(){
+    api('POST', '/api/platform/impersonate', { tenantId: '' }).then(hardReload, hardReload);
+  });
+
+  // ---- Başlatma ve oturum ----
+  function boot(){
+    var last = ''; try { last = localStorage.getItem('offerta_last_code') || ''; } catch (e) {}
+    if (last) gid('loginCode').value = last;
+    showView('loading');
+    var msg = ''; try { msg = sessionStorage.getItem('offerta_msg') || ''; sessionStorage.removeItem('offerta_msg'); } catch (e) {}
+    var toLogin = function(err){
+      showView('login');
+      if (err && err.status === 403) { setLoginError(err.message); api('POST', '/api/logout').catch(function(){}); setToken(''); }
+      else if (err && err.network) setLoginError(err.message);
+      else if (msg) setLoginError(msg);
+      if (err && err.status === 401) setToken('');
+      checkSetupNeeded();
+    };
+    if (!getToken()) { toLogin(null); return; }
+    api('GET', '/api/me').then(startSession).catch(toLogin);
+  }
+  function startSession(me){
+    AUTH.user = me.user; AUTH.isPlatform = !!me.isPlatform; AUTH.impersonating = !!me.impersonating;
+    AUTH.profile = me.user ? { username: me.user.username, displayName: me.user.displayName, role: me.user.role, tenantId: me.user.tenantId, active: true } : null;
+    profileCache = me.prefs || null;
+    if (AUTH.isPlatform && !AUTH.impersonating) { showPlatform(); return; }
+    enterTenant(me.tenant);
+  }
+  function enterTenant(t){
+    TENANT.id = t.id; TENANT.data = t;
+    currentUser = AUTH.impersonating ? '_platform' : (AUTH.profile && AUTH.profile.username) || 'user';
+    applyTenantBranding(); applyTenantToForm(); applyDefaultsToForm(); applyProfileFields(); applyRoleVisibility();
+    cloudReady = true;
+    showView('app'); showScreen('home');
+    setCloudStatus('ok');
+    lastRev = t.rev;
+    loadAllData(); startSync();
+  }
+
+  // ---- Veri katmanı: Firestore'a benzeyen ince bir yüzey (müşteri/ürün/teklif çağrıları API'ye çevrilir) ----
+  function refreshCustomers(){ return api('GET', '/api/customers').then(function(a){ customersCache = a; renderCustomerPicker(); renderCustomersTable(); return a; }); }
+  function refreshProducts(){ return api('GET', '/api/products').then(function(a){ productsCache = a; renderProductPicker(); renderProductsTable(); return a; }); }
+  function refreshQuotes(){ return api('GET', '/api/quotes').then(function(a){ archiveCache = a; renderArchive(); return a; }); }
+  function refreshTenant(){
+    return api('GET', '/api/tenant').then(function(t){ TENANT.data = t; applyTenantBranding(); applyTenantToForm(); applyRoleVisibility(); return t; });
+  }
+  function loadAllData(){
+    return Promise.all([refreshCustomers(), refreshProducts(), refreshQuotes()]).catch(function(err){ setCloudStatus('off', friendlyErr(err)); });
+  }
+  function crud(base, refresh){
+    return {
+      add: function(rec){ return api('POST', base, rec).then(function(x){ return refresh().then(function(){ return x; }); }); },
+      doc: function(id){ return {
+        update: function(rec){ return api('PUT', base + '/' + id, rec).then(function(x){ return refresh().then(function(){ return x; }); }); },
+        delete: function(){ return api('DELETE', base + '/' + id).then(refresh); } }; }
+    };
+  }
+  customersColRef = crud('/api/customers', refreshCustomers);
+  productsColRef = crud('/api/products', refreshProducts);
+  quotesColRef = {
+    add: function(rec){ return api('POST', '/api/quotes', rec).then(function(x){ return Promise.all([refreshQuotes(), refreshTenant()]).then(function(){ return x; }); }); },   // yeni teklif: sıradaki numara da tazelenir
+    doc: function(id){ return {
+      update: function(changes){                       // tam içerik: PUT, yalnızca durum alanları: PATCH
+        return api(changes && changes.items ? 'PUT' : 'PATCH', '/api/quotes/' + id, changes).then(function(x){ return refreshQuotes().then(function(){ return x; }); });
+      },
+      delete: function(){ return api('DELETE', '/api/quotes/' + id).then(refreshQuotes); } }; }
+  };
+
+  // ---- Canlı eşitleme (hafif yoklama: yalnızca küçük bir "revizyon" sayısı sorulur) ----
+  function stopSync(){ if (syncTimer) { clearInterval(syncTimer); syncTimer = null; } }
+  function startSync(){
+    stopSync();
+    syncTimer = setInterval(function(){ if (!document.hidden) syncOnce(); }, window.__syncMs || 10000);
+  }
+  function syncOnce(){
+    return api('GET', '/api/sync').then(function(s){
+      if (cloudStatusKind !== 'ok') setCloudStatus('ok');
+      if (s.rev !== lastRev) {
+        lastRev = s.rev;
+        var jobs = [refreshTenant(), loadAllData()];
+        if (gid('screen-users').classList.contains('active')) jobs.push(refreshUsers());
+        return Promise.all(jobs);
+      }
+    }).catch(function(err){
+      if (err.network) setCloudStatus('off', err.message);
+      else if (err.status === 403) sessionLost(err.message);
+    });
+  }
+
+  // ---- Markalama, varsayılanlar, hazırlayan profili ----
+  function applyTenantBranding(){
+    var d = TENANT.data || {};
+    TENANT.logo = d.logoDataUrl || '';
+    var badge = gid('tenantBadge');
+    badge.innerHTML = '';
+    if (TENANT.logo) { var im = document.createElement('img'); im.alt = ''; im.src = TENANT.logo; badge.appendChild(im); }
+    else { var ini = document.createElement('div'); ini.className = 'logo-initial'; ini.textContent = (d.name || 'O').trim().charAt(0).toUpperCase(); badge.appendChild(ini); }
+    gid('tenantName').textContent = d.name || '';
+    document.title = 'Offerta' + (d.name ? ' — ' + d.name : '');
+    recalc();
+  }
+  function applyTenantToForm(){
+    if (!TENANT.data || editingQuoteRef) return;
+    var c = tenantCompany();
+    var map = { companyName: TENANT.data.name, companyAddr: c.addr, companyPhone: c.phone, companyEmail: c.email, companyTax: c.tax };
+    Object.keys(map).forEach(function(k){ gid(k).value = map[k] || ''; });
+    if (!offerNoUserEdited && TENANT.data.nextOfferNo) gid('offerNo').value = TENANT.data.nextOfferNo;   // sunucunun verdiği sıradaki numara
+    recalc();
+  }
+  function defaultNotes(){ return tenantSettings().notes || ''; }
+  function defaultTerms(){ return tenantSettings().terms || ''; }
+  function applyDefaultsToForm(){
+    var s = tenantSettings();
+    gid('vatRate').value = (s.vatRate != null && s.vatRate !== '') ? s.vatRate : 20;
+    gid('validity').value = s.validity || 15;
+    gid('currency').value = s.currency || 'TL';
+    gid('terms').value = defaultTerms();
+    gid('notes').value = defaultNotes();
+    gid('offerDate').value = todayISO();
+    recalc();
+  }
+  var PROFILE_FIELDS = ['preparedBy','preparedByPhone','preparedByEmail'];
+  function defaultProfile(){ return { preparedBy: (AUTH.profile && AUTH.profile.displayName) || '', preparedByPhone: '', preparedByEmail: '' }; }
+  function applyProfileFields(){
+    var data = Object.assign(defaultProfile(), profileCache || {});
+    PROFILE_FIELDS.forEach(function(fid){
+      var el = gid(fid);
+      var v = data[fid] == null ? '' : data[fid];
+      if (el && document.activeElement !== el && el.value !== v) el.value = v;
+    });
+    recalc();
+  }
+  function applyLocalSettings(){ applyTenantToForm(); applyProfileFields(); }   // eski çağrı noktaları için
+
+  var profileSaveTimer = null;
+  PROFILE_FIELDS.forEach(function(fid){
+    gid(fid).addEventListener('input', function(){
+      clearTimeout(profileSaveTimer);
+      profileSaveTimer = setTimeout(function(){
+        if (!cloudReady || editingQuoteRef) return;   // düzenleme modunda form eski teklifin verisini taşır
+        var data = {}; PROFILE_FIELDS.forEach(function(f){ data[f] = gid(f).value; });
+        api('PUT', '/api/me/prefs', data).then(function(r){ profileCache = r.prefs; }).catch(function(err){ console.error('Tercih kaydı hatası:', err); });
+      }, 700);
+    });
+  });
+
+  function applyRoleVisibility(){
+    var admin = isTenantAdmin();
+    document.querySelectorAll('[data-admin-only]').forEach(function(el){ el.style.display = admin ? '' : 'none'; });
+    gid('exitImpersonateBtn').style.display = AUTH.impersonating ? '' : 'none';
+    var label = '';
+    if (AUTH.impersonating) label = 'Platform yöneticisi';
+    else if (AUTH.profile) label = 'Kullanıcı: ' + (AUTH.profile.displayName || AUTH.profile.username || '');
+    gid('userLabel').textContent = label;
+  }
+  function brandHtml(state){
+    if (TENANT.logo) return '<img class="sh-logo" src="' + escapeAttr(TENANT.logo) + '" alt="' + escapeAttr(state.companyName) + '" />';
+    return '<div class="sh-brand-name">' + escapeHtml(state.companyName) + '</div>';
+  }
+  function asciiSlug(s){
+    var map = { 'ç':'c','Ç':'C','ğ':'g','Ğ':'G','ı':'i','İ':'I','ö':'o','Ö':'O','ş':'s','Ş':'S','ü':'u','Ü':'U' };
+    return String(s || '').replace(/[çÇğĞıİöÖşŞüÜ]/g, function(ch){ return map[ch]; }).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Teklif';
+  }
+
+  // ================= Logo işleme (PDF / GIF / JPG / PNG → küçük bir resim) =================
+  function readFileAs(file, how){
+    return new Promise(function(res, rej){
+      var fr = new FileReader();
+      fr.onload = function(){ res(fr.result); };
+      fr.onerror = function(){ rej(new Error('Dosya okunamadı')); };
+      if (how === 'buffer') fr.readAsArrayBuffer(file); else fr.readAsDataURL(file);
+    });
+  }
+  function imageFromUrl(url){
+    return new Promise(function(res, rej){
+      var im = new Image();
+      im.onload = function(){ res(im); };
+      im.onerror = function(){ rej(new Error('Görsel okunamadı')); };
+      im.src = url;
+    });
+  }
+  function ensurePdfJs(){
+    if (window.pdfjsLib) { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; return Promise.resolve(window.pdfjsLib); }
+    return new Promise(function(res, rej){
+      var s = document.createElement('script');
+      s.src = PDFJS_URL;
+      s.onload = function(){
+        if (window.pdfjsLib) { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; res(window.pdfjsLib); }
+        else rej(new Error('PDF kütüphanesi yüklenemedi'));
+      };
+      s.onerror = function(){ rej(new Error('PDF kütüphanesi indirilemedi (internet bağlantısı?)')); };
+      document.head.appendChild(s);
+    });
+  }
+  function pdfFirstPageToCanvas(file){
+    return Promise.all([ readFileAs(file, 'buffer'), ensurePdfJs() ]).then(function(r){
+      return r[1].getDocument({ data: r[0] }).promise;
+    }).then(function(pdf){ return pdf.getPage(1); }).then(function(page){
+      var vp = page.getViewport({ scale: 2 });
+      var c = document.createElement('canvas');
+      c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+      return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function(){ return c; });
+    });
+  }
+  function canvasFromImage(im){
+    var c = document.createElement('canvas');
+    c.width = im.naturalWidth || im.width; c.height = im.naturalHeight || im.height;
+    c.getContext('2d').drawImage(im, 0, 0);
+    return c;
+  }
+  function trimCanvas(c){
+    var w = c.width, h = c.height, ctx = c.getContext('2d'), data;
+    try { data = ctx.getImageData(0, 0, w, h).data; } catch (e) { return c; }
+    var minX = w, minY = h, maxX = -1, maxY = -1;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var i = (y * w + x) * 4;
+        if (data[i + 3] < 20) continue;
+        if (data[i] > 245 && data[i + 1] > 245 && data[i + 2] > 245) continue;
+        if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) return c;
+    var pad = 6;
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+    var out = document.createElement('canvas');
+    out.width = maxX - minX + 1; out.height = maxY - minY + 1;
+    out.getContext('2d').drawImage(c, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  }
+  function exportLogo(canvas, preferPng){
+    var maxW = 560, maxH = 280;
+    var s = Math.min(1, maxW / canvas.width, maxH / canvas.height);
+    var out = document.createElement('canvas');
+    out.width = Math.max(1, Math.round(canvas.width * s)); out.height = Math.max(1, Math.round(canvas.height * s));
+    var ctx = out.getContext('2d');
+    if (!preferPng) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, out.width, out.height); }
+    ctx.drawImage(canvas, 0, 0, out.width, out.height);
+    var url = preferPng ? out.toDataURL('image/png') : out.toDataURL('image/jpeg', 0.9);
+    if (preferPng && url.length > 280000) {   // çok büyükse JPEG'e düş
+      var o2 = document.createElement('canvas'); o2.width = out.width; o2.height = out.height;
+      var c2 = o2.getContext('2d'); c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, o2.width, o2.height); c2.drawImage(out, 0, 0);
+      url = o2.toDataURL('image/jpeg', 0.88);
+    }
+    return url;
+  }
+  function processLogoFile(file){
+    var name = String(file.name || '').toLowerCase(), type = String(file.type || '');
+    var isPdf = type === 'application/pdf' || /\.pdf$/.test(name);
+    var isImg = /^image\/(png|jpe?g|gif)$/.test(type) || /\.(png|jpe?g|gif)$/.test(name);
+    if (!isPdf && !isImg) return Promise.reject(new Error('Desteklenen formatlar: PDF, GIF, JPG, PNG'));
+    if (file.size > 12 * 1024 * 1024) return Promise.reject(new Error('Dosya çok büyük (en fazla 12 MB).'));
+    var canvasP = isPdf ? pdfFirstPageToCanvas(file) : readFileAs(file, 'url').then(imageFromUrl).then(canvasFromImage);
+    var preferPng = /png|gif/.test(type) || /\.(png|gif)$/.test(name);
+    return canvasP.then(function(c){
+      var url = exportLogo(trimCanvas(c), preferPng && !isPdf);
+      if (url.length > 400000) throw new Error('Logo çok büyük, daha küçük bir dosya deneyin.');
+      return url;
+    });
+  }
+  function renderLogoBox(boxId, dataUrl){
+    var box = gid(boxId); box.innerHTML = '';
+    if (dataUrl) { var im = document.createElement('img'); im.className = 'logo-preview'; im.alt = 'Logo'; im.src = dataUrl; box.appendChild(im); }
+    else { var d = document.createElement('div'); d.className = 'logo-preview-empty'; d.textContent = 'Logo yok'; box.appendChild(d); }
+  }
+
+  // ================= Platform yönetim paneli =================
+  var tenantsCache = [];
+  var cfMode = 'create', cfEditId = null, cfLogoData = '';
+
+  function refreshTenants(){
+    return api('GET', '/api/platform/tenants').then(function(a){
+      a.forEach(function(x){ x._id = x.id; });
+      tenantsCache = a; renderCompanies(); return a;
+    }).catch(function(err){ gid('platformStatus').textContent = 'Şirketler okunamadı: ' + friendlyErr(err); gid('platformStatus').className = 'status-msg err'; });
+  }
+  function showPlatform(){
+    showView('platform');
+    gid('platformUser').textContent = (AUTH.user && (AUTH.user.displayName || AUTH.user.username)) || '';
+    refreshTenants();
+  }
+  function renderCompanies(){
+    var list = gid('companyList');
+    gid('companyCount').textContent = tenantsCache.length ? '(' + tenantsCache.length + ')' : '';
+    if (!tenantsCache.length) { list.innerHTML = '<div class="empty-hint">Henüz şirket eklenmedi. "+ Şirket Ekle" ile başlayın.</div>'; return; }
+    list.innerHTML = tenantsCache.map(function(t){
+      var active = t.status === 'active';
+      var logo = t.logoDataUrl ? '<img class="company-logo" alt="" src="' + escapeAttr(t.logoDataUrl) + '" />' : '<div class="company-logo-empty">Logo yok</div>';
+      var c = t.company || {};
+      var meta = 'Şirket kodu: <b>' + escapeHtml(t._id) + '</b>' + (c.email ? ' · ' + escapeHtml(c.email) : '') + (c.phone ? ' · ' + escapeHtml(c.phone) : '');
+      var id = escapeAttr(t._id);
+      return '<div class="company-card"><div class="company-top">' + logo +
+        '<div class="company-info"><div class="company-name">' + escapeHtml(t.name || t._id) + '<span class="badge ' + (active ? 'ok' : 'off') + '">' + (active ? 'Aktif' : 'Askıda') + '</span></div>' +
+        '<div class="company-meta">' + meta + '</div></div></div>' +
+        '<div class="card-actions">' +
+          '<button class="view-btn" type="button" data-act="enter" data-id="' + id + '" style="margin-left:0;">Panele Gir</button>' +
+          '<button class="view-btn" type="button" data-act="edit" data-id="' + id + '">Düzenle</button>' +
+          '<button class="view-btn" type="button" data-act="legacy" data-id="' + id + '">Eski Verileri Aktar</button>' +
+          '<button class="del-btn" type="button" data-act="toggle" data-id="' + id + '">' + (active ? 'Askıya Al' : 'Aktifleştir') + '</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  gid('companyList').addEventListener('click', function(e){
+    var btn = e.target.closest('button'); if (!btn) return;
+    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act');
+    var t = tenantsCache.filter(function(x){ return x._id === id; })[0]; if (!t) return;
+    var st = gid('platformStatus');
+    if (act === 'enter') { api('POST', '/api/platform/impersonate', { tenantId: id }).then(hardReload).catch(function(err){ st.textContent = friendlyErr(err); st.className = 'status-msg err'; }); }
+    else if (act === 'edit') openCompanyForm('edit', t);
+    else if (act === 'legacy') window.open('aktar.html?tenant=' + encodeURIComponent(id), '_blank');
+    else if (act === 'toggle') {
+      var next = t.status === 'active' ? 'suspended' : 'active';
+      if (!confirm((next === 'suspended' ? '"' + (t.name || id) + '" askıya alınsın mı? Şirket kullanıcıları giriş yapamaz.' : '"' + (t.name || id) + '" yeniden aktifleştirilsin mi?'))) return;
+      api('PATCH', '/api/platform/tenants/' + id, { status: next }).then(refreshTenants).catch(function(err){ alert('Güncellenemedi: ' + friendlyErr(err)); });
+    }
+  });
+  gid('addCompanyBtn').addEventListener('click', function(){ openCompanyForm('create', null); });
+  gid('cfClose').addEventListener('click', function(){ gid('companyModal').style.display = 'none'; });
+
+  function cfSetLogo(url){ cfLogoData = url || ''; renderLogoBox('cfLogoBox', cfLogoData); }
+  function cfMsg(msg, cls){ var el = gid('cfMsg'); el.textContent = msg || ''; el.className = 'status-msg' + (cls ? ' ' + cls : ''); }
+  function openCompanyForm(mode, t){
+    cfMode = mode; cfEditId = t ? t._id : null;
+    var s = (t && t.settings) || {}, c = (t && t.company) || {};
+    gid('cfTitle').textContent = mode === 'create' ? 'Şirket Ekle' : 'Şirketi Düzenle';
+    gid('cfTemplateWrap').style.display = mode === 'create' ? '' : 'none';
+    gid('cfAdminSection').style.display = mode === 'create' ? '' : 'none';
+    gid('cfStatusSection').style.display = mode === 'create' ? 'none' : '';
+    gid('cfCode').readOnly = mode !== 'create';
+    gid('cfName').value = t ? (t.name || '') : '';
+    gid('cfCode').value = t ? t._id : '';
+    gid('cfPrefix').value = s.offerPrefix || '';
+    gid('cfAddr').value = c.addr || ''; gid('cfPhone').value = c.phone || ''; gid('cfEmail').value = c.email || ''; gid('cfTax').value = c.tax || '';
+    gid('cfVat').value = (s.vatRate != null && s.vatRate !== '') ? s.vatRate : 20;
+    gid('cfValidity').value = s.validity || 15;
+    gid('cfCurrency').value = s.currency || 'TL';
+    gid('cfTerms').value = s.terms || ''; gid('cfNotes').value = s.notes || ''; gid('cfPin').value = s.pin || '';
+    gid('cfStatus').value = (t && t.status) || 'active';
+    gid('cfAdminUser').value = ''; gid('cfAdminPass').value = ''; gid('cfAdminName').value = '';
+    gid('cfTemplate').value = '';
+    cfSetLogo(t && t.logoDataUrl || '');
+    cfMsg('');
+    gid('companyModal').style.display = 'flex';
+  }
+  gid('cfLogoFile').addEventListener('change', function(){
+    var f = this.files && this.files[0]; if (!f) return;
+    cfMsg('Logo işleniyor…');
+    processLogoFile(f).then(function(url){ cfSetLogo(url); cfMsg('Logo hazır.', 'ok'); })
+      .catch(function(err){ cfMsg('Logo yüklenemedi: ' + err.message, 'err'); });
+    this.value = '';
+  });
+  gid('cfLogoRemove').addEventListener('click', function(){ cfSetLogo(''); });
+  gid('cfTemplate').addEventListener('change', function(){
+    var f = this.files && this.files[0]; if (!f) return;
+    var input = this;
+    var fr = new FileReader();
+    fr.onload = function(){
+      try {
+        var j = JSON.parse(fr.result), s = j.settings || {}, c = j.company || {}, a = j.admin || {};
+        gid('cfName').value = j.name || ''; gid('cfCode').value = j.code || '';
+        gid('cfPrefix').value = s.offerPrefix || '';
+        gid('cfAddr').value = c.addr || ''; gid('cfPhone').value = c.phone || ''; gid('cfEmail').value = c.email || ''; gid('cfTax').value = c.tax || '';
+        if (s.vatRate != null) gid('cfVat').value = s.vatRate;
+        if (s.validity) gid('cfValidity').value = s.validity;
+        if (s.currency) gid('cfCurrency').value = s.currency;
+        gid('cfTerms').value = s.terms || ''; gid('cfNotes').value = s.notes || ''; gid('cfPin').value = s.pin || '';
+        gid('cfAdminUser').value = a.username || ''; gid('cfAdminName').value = a.displayName || '';
+        cfSetLogo(j.logoDataUrl || '');
+        cfMsg('Şablon yüklendi. Yönetici şifresini girip kaydedin.', 'ok');
+      } catch (e) { cfMsg('Şablon dosyası okunamadı: ' + e.message, 'err'); }
+      input.value = '';
+    };
+    fr.readAsText(f);
+  });
+
+  function readCompanyForm(){
+    var code = gid('cfCode').value.trim().toLowerCase();
+    return {
+      name: gid('cfName').value.trim(), code: code,
+      company: { addr: gid('cfAddr').value.trim(), phone: gid('cfPhone').value.trim(), email: gid('cfEmail').value.trim(), tax: gid('cfTax').value.trim() },
+      settings: { offerPrefix: gid('cfPrefix').value.trim().toUpperCase() || code.replace(/[^a-z0-9]/g, '').slice(0, 3).toUpperCase(), vatRate: parseFloat(gid('cfVat').value) || 0,
+                  validity: parseInt(gid('cfValidity').value, 10) || 15, currency: gid('cfCurrency').value, terms: gid('cfTerms').value, notes: gid('cfNotes').value, pin: gid('cfPin').value.trim() },
+      logoDataUrl: cfLogoData
+    };
+  }
+  gid('cfSave').addEventListener('click', function(){
+    var f = readCompanyForm(), btn = gid('cfSave');
+    if (!f.name) { cfMsg('Firma adı gerekli.', 'err'); return; }
+    if (cfMode === 'edit') {
+      btn.disabled = true; cfMsg('Kaydediliyor…');
+      api('PATCH', '/api/platform/tenants/' + cfEditId, { name: f.name, company: f.company, settings: f.settings, logoDataUrl: f.logoDataUrl, status: gid('cfStatus').value })
+        .then(function(){ gid('companyModal').style.display = 'none'; btn.disabled = false; return refreshTenants(); })
+        .catch(function(err){ cfMsg('Kaydedilemedi: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+      return;
+    }
+    if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(f.code)) { cfMsg('Şirket kodu 3–30 karakter olmalı: küçük harf, rakam ve tire (-).', 'err'); return; }
+    if (RESERVED_CODES.indexOf(f.code) > -1) { cfMsg('Bu şirket kodu ayrılmış, başka bir kod seçin.', 'err'); return; }
+    var au = gid('cfAdminUser').value.trim().toLowerCase(), ap = gid('cfAdminPass').value, an = gid('cfAdminName').value.trim();
+    if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(au)) { cfMsg('Yönetici kullanıcı adı 3–30 karakter: küçük harf, rakam, nokta, alt çizgi, tire.', 'err'); return; }
+    if (!ap || ap.length < 6) { cfMsg('Yönetici şifresi en az 6 karakter olmalı.', 'err'); return; }
+    btn.disabled = true; cfMsg('Şirket oluşturuluyor…');
+    api('POST', '/api/platform/tenants', { name: f.name, code: f.code, company: f.company, settings: f.settings, logoDataUrl: f.logoDataUrl, admin: { username: au, password: ap, displayName: an || au } })
+      .then(function(){
+        gid('companyModal').style.display = 'none'; btn.disabled = false;
+        gid('platformStatus').textContent = '"' + f.name + '" oluşturuldu. Giriş: şirket kodu ' + f.code + ' · kullanıcı ' + au;
+        gid('platformStatus').className = 'status-msg ok';
+        return refreshTenants();
+      }).catch(function(err){ cfMsg('Oluşturulamadı: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+  });
+
+  // ================= Kullanıcı yönetimi =================
+  var usersCache = [], usMode = 'add', usTarget = null;
+
+  function refreshUsers(){
+    return api('GET', '/api/users').then(function(a){
+      a.forEach(function(x){ x._id = x.id; });
+      usersCache = a; renderUsers(); return a;
+    }).catch(function(err){ var s = gid('usersStatus'); s.textContent = 'Kullanıcılar okunamadı: ' + friendlyErr(err); s.className = 'status-msg err'; });
+  }
+  function ensureUsersListener(){ return refreshUsers(); }     // Kullanıcılar ekranı açılınca listeyi tazeler
+  function renderUsers(){
+    var list = gid('usersList');
+    gid('userCount').textContent = usersCache.length ? '(' + usersCache.length + ')' : '';
+    gid('menuUserCount').textContent = usersCache.length ? usersCache.length + ' kullanıcı' : '';
+    if (!usersCache.length) { list.innerHTML = '<div class="empty-hint">Henüz kullanıcı yok.</div>'; return; }
+    var meId = AUTH.user && AUTH.user.id;
+    list.innerHTML = usersCache.map(function(u){
+      var isMe = u._id === meId;
+      var canManage = !isMe && (AUTH.isPlatform || u.role === 'user');
+      var id = escapeAttr(u._id);
+      var actions = canManage ?
+        '<button class="view-btn" type="button" data-act="reset" data-id="' + id + '">Şifre Sıfırla</button>' +
+        '<button class="view-btn" type="button" data-act="toggle" data-id="' + id + '">' + (u.active === false ? 'Aktifleştir' : 'Pasifleştir') + '</button>' +
+        '<button class="del-btn" type="button" data-act="delete" data-id="' + id + '">Sil</button>' :
+        '<span class="hint">' + (isMe ? '(siz)' : 'yalnızca platform yöneticisi değiştirebilir') + '</span>';
+      return '<div class="user-row"><div class="u-main"><div class="u-name">' + escapeHtml(u.displayName || u.username) +
+        '<span class="badge ' + (u.active === false ? 'off' : 'ok') + '">' + (u.active === false ? 'Pasif' : 'Aktif') + '</span>' +
+        (u.role === 'admin' ? '<span class="badge ok" style="background:#E6ECFA; color:#2952A3;">Yönetici</span>' : '') + '</div>' +
+        '<div class="u-meta">Kullanıcı adı: <b>' + escapeHtml(u.username) + '</b></div></div><div class="u-actions">' + actions + '</div></div>';
+    }).join('');
+  }
+  function usMsg(msg, cls){ var el = gid('usMsg'); el.textContent = msg || ''; el.className = 'status-msg' + (cls ? ' ' + cls : ''); }
+  function openUserModal(mode, u){
+    usMode = mode; usTarget = u || null;
+    gid('usTitle').textContent = mode === 'add' ? 'Kullanıcı Ekle' : 'Şifre Sıfırla — ' + (u.displayName || u.username);
+    gid('usIdentity').style.display = mode === 'add' ? '' : 'none';
+    gid('usRoleWrap').style.display = (mode === 'add' && AUTH.isPlatform) ? '' : 'none';
+    gid('usName').value = ''; gid('usDisplay').value = ''; gid('usPass').value = ''; gid('usRole').value = 'user';
+    usMsg(''); gid('userModal').style.display = 'flex';
+  }
+  gid('addUserBtn').addEventListener('click', function(){ openUserModal('add', null); });
+  gid('usClose').addEventListener('click', function(){ gid('userModal').style.display = 'none'; });
+  gid('usersList').addEventListener('click', function(e){
+    var btn = e.target.closest('button'); if (!btn) return;
+    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act');
+    var u = usersCache.filter(function(x){ return String(x._id) === String(id); })[0]; if (!u) return;
+    var st = gid('usersStatus');
+    var fail = function(label){ return function(err){ st.textContent = label + friendlyErr(err); st.className = 'status-msg err'; }; };
+    if (act === 'reset') openUserModal('reset', u);
+    else if (act === 'toggle') {
+      var next = u.active === false;
+      if (!confirm('"' + (u.displayName || u.username) + '" ' + (next ? 'aktifleştirilsin mi?' : 'pasifleştirilsin mi? Giriş yapamaz.'))) return;
+      api('PATCH', '/api/users/' + id, { active: next }).then(refreshUsers).catch(fail('Güncellenemedi: '));
+    } else if (act === 'delete') {
+      if (!confirm('"' + (u.displayName || u.username) + '" kalıcı olarak silinsin mi? Teklifleri silinmez.')) return;
+      api('DELETE', '/api/users/' + id).then(refreshUsers).catch(fail('Silinemedi: '));
+    }
+  });
+  gid('usSave').addEventListener('click', function(){
+    var btn = gid('usSave'), pass = gid('usPass').value;
+    if (!pass || pass.length < 6) { usMsg('Şifre en az 6 karakter olmalı.', 'err'); return; }
+    if (usMode === 'add') {
+      var uname = gid('usName').value.trim().toLowerCase(), disp = gid('usDisplay').value.trim();
+      var role = AUTH.isPlatform ? gid('usRole').value : 'user';
+      if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(uname)) { usMsg('Kullanıcı adı 3–30 karakter: küçük harf, rakam, nokta, alt çizgi, tire.', 'err'); return; }
+      if (!disp) { usMsg('Ad Soyad gerekli.', 'err'); return; }
+      btn.disabled = true; usMsg('Oluşturuluyor…');
+      api('POST', '/api/users', { username: uname, displayName: disp, password: pass, role: role })
+        .then(function(){ gid('userModal').style.display = 'none'; btn.disabled = false; return refreshUsers(); })
+        .catch(function(err){ usMsg('Eklenemedi: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+    } else {
+      btn.disabled = true; usMsg('Şifre sıfırlanıyor…');
+      api('POST', '/api/users/' + usTarget._id + '/password', { password: pass })
+        .then(function(){ gid('userModal').style.display = 'none'; btn.disabled = false; })
+        .catch(function(err){ usMsg('Sıfırlanamadı: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+    }
+  });
+
+  // ================= Hesabım: kendi şifresini değiştir =================
+  function acMsg(msg, cls){ var el = gid('acMsg'); el.textContent = msg || ''; el.className = 'status-msg' + (cls ? ' ' + cls : ''); }
+  function openAccountModal(){
+    if (!AUTH.user) return;
+    gid('acWho').textContent = 'Hesap: ' + (AUTH.user.username || '');
+    gid('acCurrent').value = ''; gid('acNew').value = ''; gid('acNew2').value = ''; acMsg('');
+    gid('accountModal').style.display = 'flex';
+  }
+  gid('userLabel').addEventListener('click', openAccountModal);
+  gid('platformUser').addEventListener('click', openAccountModal);
+  gid('acClose').addEventListener('click', function(){ gid('accountModal').style.display = 'none'; });
+  gid('acSave').addEventListener('click', function(){
+    var cur = gid('acCurrent').value, n1 = gid('acNew').value, n2 = gid('acNew2').value;
+    if (!cur) { acMsg('Mevcut şifrenizi girin.', 'err'); return; }
+    if (n1.length < 6) { acMsg('Yeni şifre en az 6 karakter olmalı.', 'err'); return; }
+    if (n1 !== n2) { acMsg('Yeni şifreler eşleşmiyor.', 'err'); return; }
+    var btn = gid('acSave'); btn.disabled = true; acMsg('Değiştiriliyor…');
+    api('POST', '/api/me/password', { current: cur, next: n1 })
+      .then(function(){ acMsg('Şifreniz değiştirildi.', 'ok'); btn.disabled = false; setTimeout(function(){ gid('accountModal').style.display = 'none'; }, 900); })
+      .catch(function(err){ acMsg(err.status === 403 ? 'Mevcut şifre hatalı.' : 'Değiştirilemedi: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+  });
+
+  // ================= Şirket Ayarları (şirket yöneticisi) =================
+  var stLogoData = '';
+  function stMsg(msg, cls){ var el = gid('settingsStatus'); el.textContent = msg || ''; el.className = 'status-msg' + (cls ? ' ' + cls : ''); }
+  function fillSettingsForm(){
+    if (!TENANT.data) return;
+    var d = TENANT.data, c = d.company || {}, s = d.settings || {};
+    gid('stName').value = d.name || ''; gid('stAddr').value = c.addr || ''; gid('stPhone').value = c.phone || ''; gid('stEmail').value = c.email || ''; gid('stTax').value = c.tax || '';
+    gid('stPrefix').value = s.offerPrefix || ''; gid('stVat').value = (s.vatRate != null && s.vatRate !== '') ? s.vatRate : 20; gid('stValidity').value = s.validity || 15;
+    gid('stCurrency').value = s.currency || 'TL'; gid('stPin').value = s.pin || ''; gid('stTerms').value = s.terms || ''; gid('stNotes').value = s.notes || '';
+    stLogoData = d.logoDataUrl || ''; renderLogoBox('stLogoBox', stLogoData);
+  }
+  gid('stLogoFile').addEventListener('change', function(){
+    var f = this.files && this.files[0]; if (!f) return;
+    stMsg('Logo işleniyor…');
+    processLogoFile(f).then(function(url){ stLogoData = url; renderLogoBox('stLogoBox', url); stMsg('Logo hazır — "Ayarları Kaydet" ile onaylayın.', 'ok'); })
+      .catch(function(err){ stMsg('Logo yüklenemedi: ' + err.message, 'err'); });
+    this.value = '';
+  });
+  gid('stLogoRemove').addEventListener('click', function(){ stLogoData = ''; renderLogoBox('stLogoBox', ''); });
+  gid('saveSettingsBtn').addEventListener('click', function(){
+    var name = gid('stName').value.trim();
+    if (!name) { stMsg('Firma adı gerekli.', 'err'); return; }
+    var prefix = gid('stPrefix').value.trim().toUpperCase();
+    var btn = gid('saveSettingsBtn'); btn.disabled = true; stMsg('Kaydediliyor…');
+    api('PATCH', '/api/tenant', {
+      name: name,
+      company: { addr: gid('stAddr').value.trim(), phone: gid('stPhone').value.trim(), email: gid('stEmail').value.trim(), tax: gid('stTax').value.trim() },
+      settings: { offerPrefix: prefix, vatRate: parseFloat(gid('stVat').value) || 0, validity: parseInt(gid('stValidity').value, 10) || 15,
+                  currency: gid('stCurrency').value, pin: gid('stPin').value.trim(), terms: gid('stTerms').value, notes: gid('stNotes').value },
+      logoDataUrl: stLogoData
+    }).then(function(t){
+      TENANT.data = t; lastRev = t.rev;
+      applyTenantBranding(); applyTenantToForm(); applyRoleVisibility();
+      stMsg('Ayarlar kaydedildi.', 'ok'); btn.disabled = false;
+    }).catch(function(err){ stMsg('Kaydedilemedi: ' + friendlyErr(err), 'err'); btn.disabled = false; });
+  });
+
+  // ================= Yardımcılar =================
+  function fmt(n){ if (isNaN(n)) n = 0; return n.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function escapeAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function escapeHtml(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function todayISO(){ var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function formatDateTR(iso){ if (!iso) return '—'; var p = iso.split('-'); if (p.length !== 3) return iso; return p[2] + '.' + p[1] + '.' + p[0]; }
+  function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+
+  // ================= Teklif No =================
+  function advanceOfferNoField(){ document.getElementById('offerNo').value = (TENANT.data && TENANT.data.nextOfferNo) || ''; }
+  document.getElementById('offerNo').addEventListener('input', function(){ offerNoUserEdited = true; });
+  document.getElementById('offerDate').value = todayISO();
+
+  // ================= Ürün kalemleri (teklif içinde) =================
+  function uid(){ itemCount++; return 'it' + itemCount; }
+  function addItem(prefill){
+    var id = uid();
+    var data = Object.assign({ name:'', desc:'', qty:1, price:0, marginPercent:12 }, prefill || {});
+    items.push({ id:id, data:data });
+    renderItemCard(id, data);
+    recalc();
+  }
+  function renderItemCard(id, data){
+    var idx = items.findIndex(function(it){ return it.id === id; });
+    var card = document.createElement('div');
+    card.className = 'item-card'; card.id = 'card-' + id;
+    card.innerHTML =
+      '<div class="item-head"><span class="item-num">Ürün ' + (idx+1) + '</span>' +
+        '<button class="remove-btn" type="button" data-id="' + id + '">Kaldır</button></div>' +
+      '<div class="field"><label>Ürün / Model Adı</label>' +
+        '<input class="f-name" autocomplete="off" data-id="' + id + '" value="' + escapeAttr(data.name) + '" placeholder="Örn. Masaüstü Barkod Okuyucu" /></div>' +
+      '<div class="field"><label>Açıklama (opsiyonel)</label>' +
+        '<input class="f-desc" autocomplete="off" data-id="' + id + '" value="' + escapeAttr(data.desc) + '" placeholder="Örn. Kablosuz, 2D imager, USB dock dahil" /></div>' +
+      '<div class="row3">' +
+        '<div class="field"><label>Adet</label><input class="f-qty" autocomplete="off" data-id="' + id + '" type="number" min="0" step="1" value="' + data.qty + '" /></div>' +
+        '<div class="field"><label>Alış Fiyatı</label><input class="f-price" autocomplete="off" data-id="' + id + '" type="number" min="0" step="0.01" value="' + data.price + '" /></div>' +
+        '<div class="field"><label>% Kâr Marjı <span style="color:var(--muted);font-weight:400;">(PDF\'te görünmez)</span></label><input class="f-margin" autocomplete="off" data-id="' + id + '" type="number" min="0" step="0.5" value="' + data.marginPercent + '" /></div>' +
+      '</div>' +
+      '<div class="item-line-total">Satır Toplamı: <b class="lt-' + id + '">0,00</b></div>';
+    itemsWrap.appendChild(card);
+  }
+  function removeItem(id){
+    items = items.filter(function(it){ return it.id !== id; });
+    var el = document.getElementById('card-' + id);
+    if (el) el.remove();
+    items.forEach(function(it, i){ var c = document.getElementById('card-' + it.id); if (c) c.querySelector('.item-num').textContent = 'Ürün ' + (i+1); });
+    recalc();
+  }
+  itemsWrap.addEventListener('input', function(e){
+    var t = e.target, id = t.getAttribute('data-id');
+    if (!id) return;
+    var it = items.find(function(x){ return x.id === id; });
+    if (!it) return;
+    if (t.classList.contains('f-name')) it.data.name = t.value;
+    else if (t.classList.contains('f-desc')) it.data.desc = t.value;
+    else if (t.classList.contains('f-qty')) it.data.qty = parseFloat(t.value) || 0;
+    else if (t.classList.contains('f-price')) it.data.price = parseFloat(t.value) || 0;
+    else if (t.classList.contains('f-margin')) it.data.marginPercent = parseFloat(t.value) || 0;
+    recalc();
+  });
+  itemsWrap.addEventListener('click', function(e){ if (e.target.classList.contains('remove-btn')) removeItem(e.target.getAttribute('data-id')); });
+  document.getElementById('addItemBtn').addEventListener('click', function(){ addItem(); });
+
+  // ================= Müşteri kataloğu =================
+  function getLocalCustomers(){ return []; }
+  function saveLocalCustomers(arr){}
+  var editingCustomerId = null;
+
+  function renderCustomerPicker(){
+    var sel = document.getElementById('custPicker');
+    var list = cloudReady ? customersCache : getLocalCustomers();
+    var current = sel.value;
+    sel.innerHTML = '<option value="">— Seçiniz veya alttan yeni girin —</option>' + list.map(function(c){
+      return '<option value="' + escapeAttr(c._id) + '">' + escapeHtml(c.name) + '</option>';
+    }).join('');
+    if (list.some(function(c){ return c._id === current; })) sel.value = current;
+    document.getElementById('menuCustomerCount').textContent = list.length ? list.length + ' kayıtlı müşteri' : '';
+  }
+  document.getElementById('custPicker').addEventListener('change', function(){
+    var id = this.value; if (!id) return;
+    var list = cloudReady ? customersCache : getLocalCustomers();
+    var c = list.find(function(x){ return x._id === id; });
+    if (c) {
+      document.getElementById('custName').value = c.name || '';
+      document.getElementById('custContact').value = c.contact || '';
+      document.getElementById('custPhone').value = c.phone || '';
+      document.getElementById('custEmail').value = c.email || '';
+    }
+  });
+
+  function renderCustomersTable(){
+    var list = cloudReady ? customersCache : getLocalCustomers();
+    var emptyEl = document.getElementById('customersEmpty');
+    var tableEl = document.getElementById('customersTable');
+    var tbodyEl = document.getElementById('customersTbody');
+    document.getElementById('custListCount').textContent = list.length ? '(' + list.length + ')' : '';
+    if (!list.length) { emptyEl.style.display = ''; tableEl.style.display = 'none'; return; }
+    emptyEl.style.display = 'none'; tableEl.style.display = '';
+    tbodyEl.innerHTML = list.map(function(c){
+      return '<tr><td>' + escapeHtml(c.name) + '</td><td>' + escapeHtml(c.contact || '—') + '</td><td>' + escapeHtml(c.phone || '—') + '</td><td>' + escapeHtml(c.email || '—') + '</td>' +
+        '<td style="text-align:right; white-space:nowrap;">' +
+          '<button class="view-btn" type="button" data-act="edit" data-id="' + escapeAttr(c._id) + '">Düzenle</button>' +
+          '<button class="del-btn" type="button" data-act="delete" data-id="' + escapeAttr(c._id) + '">Sil</button>' +
+        '</td></tr>';
+    }).join('');
+  }
+  document.getElementById('customersTbody').addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    var act = btn.getAttribute('data-act');
+    if (act === 'delete') {
+      if (!confirm('Bu müşteriyi silmek istediğinize emin misiniz?')) return;
+      if (cloudReady) { customersColRef.doc(id).delete().catch(function(err){ alert('Silme hatası: ' + err.message); }); }
+      else { var arr = getLocalCustomers().filter(function(c){ return c._id !== id; }); saveLocalCustomers(arr); renderCustomerPicker(); renderCustomersTable(); }
+    } else if (act === 'edit') {
+      var list = cloudReady ? customersCache : getLocalCustomers();
+      var c = list.find(function(x){ return x._id === id; });
+      if (!c) return;
+      editingCustomerId = id;
+      document.getElementById('custFormName').value = c.name || '';
+      document.getElementById('custFormContact').value = c.contact || '';
+      document.getElementById('custFormPhone').value = c.phone || '';
+      document.getElementById('custFormEmail').value = c.email || '';
+      document.getElementById('saveCustomerBtn').textContent = 'Müşteriyi Güncelle';
+      document.getElementById('cancelCustomerEditBtn').style.display = '';
+      document.getElementById('custFormName').scrollIntoView({ behavior:'smooth', block:'center' });
+    }
+  });
+
+  function exitCustomerEditMode(){
+    editingCustomerId = null;
+    document.getElementById('saveCustomerBtn').textContent = 'Müşteriyi Kaydet';
+    document.getElementById('cancelCustomerEditBtn').style.display = 'none';
+    document.getElementById('custFormName').value = '';
+    document.getElementById('custFormContact').value = '';
+    document.getElementById('custFormPhone').value = '';
+    document.getElementById('custFormEmail').value = '';
+  }
+  document.getElementById('cancelCustomerEditBtn').addEventListener('click', exitCustomerEditMode);
+
+  document.getElementById('saveCustomerBtn').addEventListener('click', function(){
+    var name = document.getElementById('custFormName').value.trim();
+    var contact = document.getElementById('custFormContact').value.trim();
+    var phone = document.getElementById('custFormPhone').value.trim();
+    var email = document.getElementById('custFormEmail').value.trim();
+    var statusEl = document.getElementById('customerFormStatus');
+    if (!name) { statusEl.textContent = 'Firma adı gerekli.'; statusEl.className = 'status-msg err'; return; }
+    var record = { name: name, contact: contact, phone: phone, email: email };
+
+    if (editingCustomerId) {
+      var idToUpdate = editingCustomerId;
+      function afterUpdate(){
+        statusEl.textContent = 'Güncellendi.'; statusEl.className = 'status-msg ok';
+        exitCustomerEditMode();
+      }
+      if (cloudReady) {
+        customersColRef.doc(idToUpdate).update(record).then(afterUpdate)
+          .catch(function(err){ statusEl.textContent = 'Güncelleme hatası: ' + err.message; statusEl.className = 'status-msg err'; });
+      } else {
+        var arr = getLocalCustomers();
+        var idx = arr.findIndex(function(c){ return c._id === idToUpdate; });
+        if (idx > -1) { Object.assign(arr[idx], record); saveLocalCustomers(arr); renderCustomerPicker(); renderCustomersTable(); }
+        afterUpdate();
+      }
+      return;
+    }
+
+    function afterSave(){
+      statusEl.textContent = 'Kaydedildi.'; statusEl.className = 'status-msg ok';
+      document.getElementById('custFormName').value = '';
+      document.getElementById('custFormContact').value = '';
+      document.getElementById('custFormPhone').value = '';
+      document.getElementById('custFormEmail').value = '';
+    }
+    if (cloudReady) {
+      customersColRef.add(record)
+        .then(afterSave)
+        .catch(function(err){ statusEl.textContent = 'Kayıt hatası: ' + err.message; statusEl.className = 'status-msg err'; });
+    } else {
+      var arr = getLocalCustomers(); record._id = genId(); arr.push(record); saveLocalCustomers(arr);
+      renderCustomerPicker(); renderCustomersTable(); afterSave();
+    }
+  });
+
+  // ================= Ürün kataloğu =================
+  function getLocalProducts(){ return []; }
+  function saveLocalProducts(arr){}
+
+  function renderProductPicker(){
+    var sel = document.getElementById('prodPicker');
+    var list = cloudReady ? productsCache : getLocalProducts();
+    sel.innerHTML = '<option value="">— Kataloğdan seçin —</option>' + list.map(function(p){
+      return '<option value="' + escapeAttr(p._id) + '">' + escapeHtml(p.name) + '</option>';
+    }).join('');
+    document.getElementById('menuProductCount').textContent = list.length ? list.length + ' kayıtlı ürün' : '';
+  }
+  document.getElementById('addFromCatalogBtn').addEventListener('click', function(){
+    var sel = document.getElementById('prodPicker'); var id = sel.value; if (!id) return;
+    var list = cloudReady ? productsCache : getLocalProducts();
+    var p = list.find(function(x){ return x._id === id; });
+    if (p) {
+      addItem({ name: p.name, desc: p.desc || '', qty: 1, price: p.costPrice || 0, marginPercent: (p.marginPercent != null ? p.marginPercent : 12) });
+      if (p.currency) { document.getElementById('currency').value = p.currency; recalc(); }
+    }
+    sel.value = '';
+  });
+
+  var editingProductId = null;
+
+  function renderProductsTable(){
+    var list = cloudReady ? productsCache : getLocalProducts();
+    var emptyEl = document.getElementById('productsEmpty');
+    var tableEl = document.getElementById('productsTable');
+    var tbodyEl = document.getElementById('productsTbody');
+    document.getElementById('prodListCount').textContent = list.length ? '(' + list.length + ')' : '';
+    if (!list.length) { emptyEl.style.display = ''; tableEl.style.display = 'none'; return; }
+    emptyEl.style.display = 'none'; tableEl.style.display = '';
+    tbodyEl.innerHTML = list.map(function(p){
+      return '<tr><td>' + escapeHtml(p.name) + (p.desc ? '<div style="font-size:11px;color:var(--muted);">' + escapeHtml(p.desc) + '</div>' : '') + '</td>' +
+        '<td class="num">' + fmt(p.costPrice || 0) + '</td><td class="num">%' + fmt(p.marginPercent || 0).replace(/,00$/,'') + '</td>' +
+        '<td>' + escapeHtml(CUR_SYMBOL[p.currency] || p.currency || 'TL') + '</td>' +
+        '<td style="text-align:right; white-space:nowrap;">' +
+          '<button class="view-btn" type="button" data-act="edit" data-id="' + escapeAttr(p._id) + '">Düzenle</button>' +
+          '<button class="del-btn" type="button" data-act="delete" data-id="' + escapeAttr(p._id) + '">Sil</button>' +
+        '</td></tr>';
+    }).join('');
+  }
+  document.getElementById('productsTbody').addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    var act = btn.getAttribute('data-act');
+    if (act === 'delete') {
+      if (!confirm('Bu ürünü silmek istediğinize emin misiniz?')) return;
+      if (cloudReady) { productsColRef.doc(id).delete().catch(function(err){ alert('Silme hatası: ' + err.message); }); }
+      else { var arr = getLocalProducts().filter(function(p){ return p._id !== id; }); saveLocalProducts(arr); renderProductPicker(); renderProductsTable(); }
+    } else if (act === 'edit') {
+      var list = cloudReady ? productsCache : getLocalProducts();
+      var p = list.find(function(x){ return x._id === id; });
+      if (!p) return;
+      editingProductId = id;
+      document.getElementById('prodFormName').value = p.name || '';
+      document.getElementById('prodFormDesc').value = p.desc || '';
+      document.getElementById('prodFormPrice').value = p.costPrice || '';
+      document.getElementById('prodFormMargin').value = (p.marginPercent != null ? p.marginPercent : 12);
+      document.getElementById('prodFormCurrency').value = p.currency || 'TL';
+      document.getElementById('saveProductBtn').textContent = 'Ürünü Güncelle';
+      document.getElementById('cancelProductEditBtn').style.display = '';
+      document.getElementById('prodFormName').scrollIntoView({ behavior:'smooth', block:'center' });
+    }
+  });
+
+  function exitProductEditMode(){
+    editingProductId = null;
+    document.getElementById('saveProductBtn').textContent = 'Ürünü Kaydet';
+    document.getElementById('cancelProductEditBtn').style.display = 'none';
+    document.getElementById('prodFormName').value = '';
+    document.getElementById('prodFormDesc').value = '';
+    document.getElementById('prodFormPrice').value = '';
+    document.getElementById('prodFormMargin').value = '12';
+    document.getElementById('prodFormCurrency').value = 'TL';
+  }
+  document.getElementById('cancelProductEditBtn').addEventListener('click', exitProductEditMode);
+
+  document.getElementById('saveProductBtn').addEventListener('click', function(){
+    var name = document.getElementById('prodFormName').value.trim();
+    var desc = document.getElementById('prodFormDesc').value.trim();
+    var price = parseFloat(document.getElementById('prodFormPrice').value) || 0;
+    var margin = parseFloat(document.getElementById('prodFormMargin').value) || 0;
+    var currency = document.getElementById('prodFormCurrency').value;
+    var statusEl = document.getElementById('productFormStatus');
+    if (!name) { statusEl.textContent = 'Ürün adı gerekli.'; statusEl.className = 'status-msg err'; return; }
+    var record = { name: name, desc: desc, costPrice: price, marginPercent: margin, currency: currency };
+
+    if (editingProductId) {
+      var idToUpdate = editingProductId;
+      function afterUpdate(){
+        statusEl.textContent = 'Güncellendi.'; statusEl.className = 'status-msg ok';
+        exitProductEditMode();
+      }
+      if (cloudReady) {
+        productsColRef.doc(idToUpdate).update(record).then(afterUpdate)
+          .catch(function(err){ statusEl.textContent = 'Güncelleme hatası: ' + err.message; statusEl.className = 'status-msg err'; });
+      } else {
+        var arr = getLocalProducts();
+        var idx = arr.findIndex(function(p){ return p._id === idToUpdate; });
+        if (idx > -1) { Object.assign(arr[idx], record); saveLocalProducts(arr); renderProductPicker(); renderProductsTable(); }
+        afterUpdate();
+      }
+      return;
+    }
+
+    function afterSave(){
+      statusEl.textContent = 'Kaydedildi.'; statusEl.className = 'status-msg ok';
+      document.getElementById('prodFormName').value = '';
+      document.getElementById('prodFormDesc').value = '';
+      document.getElementById('prodFormPrice').value = '';
+      document.getElementById('prodFormMargin').value = '12';
+      document.getElementById('prodFormCurrency').value = 'TL';
+    }
+    if (cloudReady) {
+      productsColRef.add(record)
+        .then(afterSave)
+        .catch(function(err){ statusEl.textContent = 'Kayıt hatası: ' + err.message; statusEl.className = 'status-msg err'; });
+    } else {
+      var arr = getLocalProducts(); record._id = genId(); arr.push(record); saveLocalProducts(arr);
+      renderProductPicker(); renderProductsTable(); afterSave();
+    }
+  });
+
+  // ================= Teklif sayfası oluşturma (saf fonksiyon) =================
+  function buildSheetHTML(state){
+    var sym = CUR_SYMBOL[state.currency] || '';
+    var subtotal = 0, rows = '';
+    (state.items || []).forEach(function(it, i){
+      var effectiveUnitPrice = (it.price || 0) * (1 + (it.marginPercent || 0) / 100);
+      var lineTotal = (it.qty || 0) * effectiveUnitPrice;
+      subtotal += lineTotal;
+      rows += '<tr><td class="num">' + (i+1) + '</td>' +
+        '<td><div class="prod-name">' + (escapeHtml(it.name) || '—') + '</div>' +
+        (it.desc ? '<div class="prod-desc">' + escapeHtml(it.desc) + '</div>' : '') + '</td>' +
+        '<td class="num">' + fmt(it.qty || 0).replace(/,00$/, '') + '</td>' +
+        '<td class="num">' + sym + ' ' + fmt(effectiveUnitPrice) + '</td>' +
+        '<td class="num"><b>' + sym + ' ' + fmt(lineTotal) + '</b></td></tr>';
+    });
+    var vatRate = state.vatRate || 0;
+    var vatAmount = subtotal * vatRate / 100;
+    var grandTotal = subtotal + vatAmount;
+    var tableBody = rows || '<tr><td colspan="5" class="sh-empty-hint">Henüz ürün eklenmedi.</td></tr>';
+    var html =
+      '<div class="sh-top"><div class="sh-brand">' +
+        brandHtml(state) +
+        '<div><div class="sh-brand-sub">TEKLİF FORMU</div></div></div>' +
+        '<div class="sh-company-info">' + escapeHtml(state.companyAddr) + '<br/>' +
+          escapeHtml(state.companyPhone) + (state.companyPhone && state.companyEmail ? ' · ' : '') + escapeHtml(state.companyEmail) + '<br/>' +
+          escapeHtml(state.companyTax) + '</div></div>' +
+      '<div class="sh-title-row"><div class="sh-title">Fiyat Teklifi</div>' +
+        '<div class="sh-meta">Teklif No: ' + escapeHtml(state.offerNo) + '<br/>Tarih: ' + formatDateTR(state.date) + ' · Geçerlilik: ' + escapeHtml(String(state.validity)) + ' gün</div></div>' +
+      '<div class="sh-parties"><div><div class="sh-party-label">TEKLİF VEREN</div>' +
+          '<div class="sh-party-name">' + escapeHtml(state.companyName) + '</div>' +
+          (state.preparedBy ? '<div class="sh-party-sub">Hazırlayan: ' + escapeHtml(state.preparedBy) + (state.preparedByPhone ? ' · ' + escapeHtml(state.preparedByPhone) : '') + (state.preparedByEmail ? '<br/>' + escapeHtml(state.preparedByEmail) : '') + '</div>' : '') + '</div>' +
+        '<div><div class="sh-party-label">MÜŞTERİ</div><div class="sh-party-name">' + (escapeHtml(state.custName) || '—') + '</div>' +
+          '<div class="sh-party-sub">' + (state.custContact ? escapeHtml(state.custContact) : '') +
+            (state.custContact && state.custPhone ? ' · ' : '') + (state.custPhone ? escapeHtml(state.custPhone) : '') +
+            (state.custEmail ? '<br/>' + escapeHtml(state.custEmail) : '') + '</div></div></div>' +
+      '<table class="sh-table"><thead><tr><th class="num">#</th><th>Ürün</th><th class="num">Adet</th><th class="num">Birim Fiyat</th><th class="num">Toplam</th></tr></thead>' +
+        '<tbody>' + tableBody + '</tbody></table>' +
+      '<div class="sh-totals"><div class="sh-totals-box">' +
+        '<div class="sh-totals-row"><span>Ara Toplam</span><span class="amt">' + sym + ' ' + fmt(subtotal) + '</span></div>' +
+        '<div class="sh-totals-row"><span>KDV (%' + fmt(vatRate).replace(/,00$/,'') + ')</span><span class="amt">' + sym + ' ' + fmt(vatAmount) + '</span></div>' +
+        '<div class="sh-totals-row grand"><span>Genel Toplam</span><span class="amt">' + sym + ' ' + fmt(grandTotal) + '</span></div></div></div>' +
+      (state.terms || state.notes ? '<div class="sh-notes">' +
+          (state.terms ? '<div class="sh-notes-label">ÖDEME / TESLİMAT</div>' + escapeHtml(state.terms) : '') +
+          (state.notes ? (state.terms ? '<br/><br/>' : '') + '<div class="sh-notes-label">NOTLAR</div>' + escapeHtml(state.notes) : '') + '</div>' : '') +
+      '<div class="sh-footer"><span>' + escapeHtml(state.companyName) + '</span><span>Bu teklif ' + escapeHtml(String(state.validity)) + ' gün geçerlidir.</span></div>';
+    return { html: html, totals: { subtotal: subtotal, vatAmount: vatAmount, grandTotal: grandTotal, sym: sym } };
+  }
+
+  function readFormState(){
+    return {
+      companyName: document.getElementById('companyName').value || (TENANT.data && TENANT.data.name) || '',
+      companyAddr: document.getElementById('companyAddr').value,
+      companyPhone: document.getElementById('companyPhone').value,
+      companyEmail: document.getElementById('companyEmail').value,
+      companyTax: document.getElementById('companyTax').value,
+      offerNo: document.getElementById('offerNo').value || '—',
+      date: document.getElementById('offerDate').value,
+      validity: document.getElementById('validity').value || '—',
+      currency: document.getElementById('currency').value,
+      preparedBy: document.getElementById('preparedBy').value,
+      preparedByPhone: document.getElementById('preparedByPhone').value,
+      preparedByEmail: document.getElementById('preparedByEmail').value,
+      custName: document.getElementById('custName').value,
+      custContact: document.getElementById('custContact').value,
+      custPhone: document.getElementById('custPhone').value,
+      custEmail: document.getElementById('custEmail').value,
+      vatRate: parseFloat(document.getElementById('vatRate').value) || 0,
+      terms: document.getElementById('terms').value,
+      notes: document.getElementById('notes').value,
+      items: items.map(function(it){ return Object.assign({}, it.data); })
+    };
+  }
+
+  function recalc(){
+    var state = readFormState();
+    var built = buildSheetHTML(state);
+    document.getElementById('sheet').innerHTML = built.html;
+    items.forEach(function(it){
+      var effectiveUnitPrice = (it.data.price || 0) * (1 + (it.data.marginPercent || 0) / 100);
+      var lineTotal = (it.data.qty || 0) * effectiveUnitPrice;
+      var el = document.querySelector('.lt-' + it.id);
+      if (el) el.textContent = built.totals.sym + ' ' + fmt(lineTotal);
+    });
+  }
+  var fieldIds = ['companyName','companyAddr','companyPhone','companyEmail','companyTax','offerNo','offerDate','validity','currency','preparedBy','preparedByPhone','preparedByEmail','custName','custContact','custPhone','custEmail','vatRate','terms','notes'];
+  fieldIds.forEach(function(id){ var el = document.getElementById(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
+
+  recalc();
+  renderCustomerPicker(); renderCustomersTable();
+  renderProductPicker(); renderProductsTable();
+  renderArchive();
+  applyLocalSettings();
+
+  // ================= Geçmiş Teklifler =================
+  function getLocalArchive(){ return []; }
+  function saveLocalArchive(arr){}
+
+  function statusBadgeHtml(r){
+    if (r.status === 'faturalandi') {
+      return '<span style="color:#2952A3; font-weight:700;">Faturalandı</span>' +
+        '<div style="font-size:10px; color:var(--muted);">' + escapeHtml(formatDateTR(r.statusDate)) + '</div>';
+    }
+    if (r.status === 'onaylandi') {
+      return '<span style="color:#2E7D4F; font-weight:700;">Onaylandı</span>' +
+        '<div style="font-size:10px; color:var(--muted);">' + escapeHtml(formatDateTR(r.statusDate)) + '</div>';
+    }
+    if (r.status === 'reddedildi') {
+      return '<span style="color:#B3261E; font-weight:700;">Onaylanmadı</span>' +
+        '<div style="font-size:10px; color:var(--muted);">' + escapeHtml(formatDateTR(r.statusDate)) + '</div>' +
+        (r.rejectNote ? '<div style="font-size:10.5px; color:var(--ink-soft); font-style:italic; max-width:220px; margin-top:2px;" title="' + escapeAttr(r.rejectNote) + '">"' + escapeHtml(r.rejectNote) + '"</div>' : '');
+    }
+    return '<span style="color:var(--muted);">Bekliyor</span>';
+  }
+
+  function renderArchive(){
+    var arr = cloudReady ? archiveCache : getLocalArchive();
+    var emptyEl = document.getElementById('archiveEmpty');
+    var listEl = document.getElementById('archiveList');
+    var countEl = document.getElementById('archiveCount');
+    var clearBtn = document.getElementById('clearArchiveBtn');
+    countEl.textContent = arr.length ? '(' + arr.length + ')' : '';
+    document.getElementById('menuHistoryCount').textContent = arr.length ? arr.length + ' teklif' : '';
+    if (!arr.length) { emptyEl.style.display = ''; listEl.style.display = 'none'; clearBtn.style.display = 'none'; return; }
+    emptyEl.style.display = 'none'; listEl.style.display = ''; clearBtn.style.display = '';
+    listEl.innerHTML = arr.map(function(r, idx){
+      var sym = r.sym || (CUR_SYMBOL[r.currency] || '');
+      var approveBtn = (r.status === 'onaylandi' || r.status === 'reddedildi' || r.status === 'faturalandi') ? '' :
+        '<button class="view-btn" type="button" data-act="approve" data-idx="' + idx + '">Onaylandı</button>';
+      var rejectBtn = (r.status === 'onaylandi' || r.status === 'reddedildi' || r.status === 'faturalandi') ? '' :
+        '<button class="view-btn" type="button" data-act="reject" data-idx="' + idx + '" style="color:#B3261E; border-color:#E8B4AE;">Onaylanmadı</button>';
+      var invoiceBtn = (r.status === 'onaylandi') ?
+        '<button class="view-btn" type="button" data-act="invoice" data-idx="' + idx + '">Faturalandı İşaretle</button>' : '';
+      var contentEditBtn = (!r.status) ?
+        '<button class="view-btn" type="button" data-act="contentEdit" data-idx="' + idx + '">İçeriği Düzenle</button>' : '';
+      return '<div class="quote-card">' +
+          '<div class="quote-card-top">' +
+            '<div>' +
+              '<div class="quote-card-id">' + escapeHtml(r.offerNo || '—') + '</div>' +
+              '<div class="quote-card-name">' + escapeHtml(r.custName || '—') + '</div>' +
+              '<div class="quote-card-meta">' + escapeHtml(formatDateTR(r.date)) + (r.preparedBy ? ' · ' + escapeHtml(r.preparedBy) : '') + '</div>' +
+            '</div>' +
+            '<div class="quote-card-right">' +
+              '<div class="quote-card-amount">' + escapeHtml(sym) + ' ' + fmt(r.grandTotal || 0) + '</div>' +
+              '<div class="quote-card-status">' + statusBadgeHtml(r) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="quote-card-actions">' +
+            '<button class="view-btn" type="button" data-act="view" data-idx="' + idx + '">Görüntüle</button>' +
+            approveBtn + rejectBtn + invoiceBtn + contentEditBtn +
+            '<button class="view-btn" type="button" data-act="edit" data-idx="' + idx + '">Durumu Düzenle</button>' +
+            '<button class="del-btn" type="button" data-act="delete" data-idx="' + idx + '">Sil</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function getArchiveArray(){ return cloudReady ? archiveCache : getLocalArchive(); }
+
+  function persistRecordUpdate(idx, changes){
+    var arr = getArchiveArray();
+    var record = arr[idx];
+    if (!record) return;
+    if (cloudReady) {
+      quotesColRef.doc(record._id).update(changes).catch(function(err){ alert('Güncelleme hatası: ' + err.message); });
+    } else {
+      Object.assign(record, changes);
+      saveLocalArchive(arr);
+      renderArchive();
+    }
+  }
+
+  function deleteRecord(idx){
+    var arr = getArchiveArray();
+    var record = arr[idx];
+    if (!record) return;
+    if (cloudReady) {
+      quotesColRef.doc(record._id).delete().catch(function(err){ alert('Silme hatası: ' + err.message); });
+    } else {
+      arr.splice(idx, 1);
+      saveLocalArchive(arr);
+      renderArchive();
+    }
+  }
+
+  function askPin(promptText){
+    pendingPin = '';
+    if (!tenantSettings().hasPin) {
+      if (isTenantAdmin()) return true;
+      alert('Bu işlem için yönetici yetkisi veya işlem şifresi gerekli. Şirket yöneticinizden "Şirket Ayarları" bölümünde işlem şifresi tanımlamasını isteyin.');
+      return false;
+    }
+    var v = prompt(promptText || 'Bu işlem için şifre girin:');
+    if (v === null) return false;
+    pendingPin = v;                      // sunucu doğrular; yanlışsa "Yanlış şifre." döner
+    return true;
+  }
+
+  document.getElementById('archiveList').addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var idx = parseInt(btn.getAttribute('data-idx'), 10);
+    var arr = getArchiveArray();
+    var record = arr[idx];
+    if (!record) return;
+
+    if (act === 'view') {
+      openPreviewModal(record, false);
+    } else if (act === 'approve') {
+      persistRecordUpdate(idx, { status: 'onaylandi', statusDate: todayISO() });
+    } else if (act === 'reject') {
+      var note = prompt('(' + (record.offerNo || 'Teklif') + ' — ' + (record.custName || '—') + ') Neden onaylanmadı? Kısa bir not ekleyebilirsiniz (boş bırakabilirsiniz):', '');
+      if (note === null) return;
+      persistRecordUpdate(idx, { status: 'reddedildi', statusDate: todayISO(), rejectNote: note.trim() });
+    } else if (act === 'invoice') {
+      persistRecordUpdate(idx, { status: 'faturalandi', statusDate: todayISO() });
+    } else if (act === 'contentEdit') {
+      loadQuoteForEdit(record, record._id || idx);
+    } else if (act === 'edit') {
+      if (!askPin('Durumu değiştirmek için şifre girin:')) return;
+      var choice = prompt('Yeni durum için yazın: "onay" (Onaylandı), "red" (Onaylanmadı) veya "fatura" (Faturalandı — mevcut fatura belgesi varsa korunur)', record.status === 'reddedildi' ? 'onay' : 'red');
+      if (choice === null) return;
+      choice = choice.trim().toLowerCase();
+      var newStatus = null;
+      if (choice === 'onay' || choice === 'onaylandi' || choice === 'onaylandı') newStatus = 'onaylandi';
+      else if (choice === 'red' || choice === 'reddedildi') newStatus = 'reddedildi';
+      else if (choice === 'fatura' || choice === 'faturalandi' || choice === 'faturalandı') newStatus = 'faturalandi';
+      else { alert('Geçersiz giriş. "onay", "red" veya "fatura" yazmalısınız.'); return; }
+      persistRecordUpdate(idx, { status: newStatus, statusDate: todayISO() });
+    } else if (act === 'delete') {
+
+      if (!askPin('Bu teklifi silmek için şifre girin:')) return;
+      if (!confirm('Bu teklif kalıcı olarak silinecek. Emin misiniz?')) return;
+      deleteRecord(idx);
+    }
+  });
+
+  function deleteAllQuotesCloud(){ return api('DELETE', '/api/quotes').then(refreshQuotes); }
+
+  document.getElementById('clearArchiveBtn').addEventListener('click', function(){
+    if (!askPin('Tüm geçmişi silmek için şifre girin:')) return;
+    if (!confirm('Geçmiş teklif kayıtlarının TÜMÜ silinsin mi? Bu işlem geri alınamaz.')) return;
+    if (cloudReady) {
+      deleteAllQuotesCloud().catch(function(err){ alert('Silme hatası: ' + err.message); });
+    } else {
+      saveLocalArchive([]); renderArchive();
+    }
+  });
+
+  function resetFormForNewOffer(){
+    items = []; itemsWrap.innerHTML = '';
+    document.getElementById('custName').value = '';
+    document.getElementById('custContact').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custEmail').value = '';
+    document.getElementById('custPicker').value = '';
+    document.getElementById('notes').value = defaultNotes();
+    document.getElementById('offerDate').value = todayISO();
+  }
+
+  // ================= Bekleyen teklifi içerikle düzenleme =================
+  var editingQuoteRef = null; // { mode: 'cloud', id } veya { mode: 'local', idx }
+
+  function loadQuoteForEdit(record, idOrIdx){
+    editingQuoteRef = cloudReady ? { mode: 'cloud', id: record._id } : { mode: 'local', idx: idOrIdx };
+    offerNoUserEdited = true; // sayaç dinleyicisi bu alanın üzerine yazmasın
+
+    document.getElementById('companyName').value = record.companyName || '';
+    document.getElementById('companyAddr').value = record.companyAddr || '';
+    document.getElementById('companyPhone').value = record.companyPhone || '';
+    document.getElementById('companyEmail').value = record.companyEmail || '';
+    document.getElementById('companyTax').value = record.companyTax || '';
+    document.getElementById('offerNo').value = record.offerNo || '';
+    document.getElementById('offerDate').value = record.date || todayISO();
+    document.getElementById('validity').value = record.validity || 15;
+    document.getElementById('currency').value = record.currency || 'TL';
+    document.getElementById('preparedBy').value = record.preparedBy || '';
+    document.getElementById('preparedByPhone').value = record.preparedByPhone || '';
+    document.getElementById('preparedByEmail').value = record.preparedByEmail || '';
+    document.getElementById('custPicker').value = '';
+    document.getElementById('custName').value = record.custName || '';
+    document.getElementById('custContact').value = record.custContact || '';
+    document.getElementById('custPhone').value = record.custPhone || '';
+    document.getElementById('custEmail').value = record.custEmail || '';
+    document.getElementById('vatRate').value = (record.vatRate != null ? record.vatRate : 20);
+    document.getElementById('terms').value = record.terms || '';
+    document.getElementById('notes').value = record.notes || '';
+
+    items = []; itemsWrap.innerHTML = '';
+    (record.items || []).forEach(function(it){ addItem(Object.assign({}, it)); });
+    recalc();
+
+    document.getElementById('createBtn').textContent = 'Teklifi Güncelle';
+    document.getElementById('cancelQuoteEditBtn').style.display = '';
+    document.getElementById('statusMsg').textContent = record.offerNo + ' düzenleniyor. Değişiklikleri yapıp "Teklifi Güncelle"ye basın.';
+    document.getElementById('statusMsg').className = 'status-msg';
+
+    showScreen('quote');
+  }
+
+  function exitQuoteEditMode(){
+    editingQuoteRef = null;
+    document.getElementById('createBtn').textContent = 'Teklifi Oluştur';
+    document.getElementById('cancelQuoteEditBtn').style.display = 'none';
+    offerNoUserEdited = false;
+    resetFormForNewOffer();
+    advanceOfferNoField();
+    applyDefaultsToForm();
+    applyLocalSettings();
+    recalc();
+  }
+  document.getElementById('cancelQuoteEditBtn').addEventListener('click', function(){
+    if (confirm('Düzenlemeyi iptal etmek istediğinize emin misiniz? Yaptığınız değişiklikler kaydedilmeyecek.')) exitQuoteEditMode();
+  });
+
+  // ================= Önizleme / PDF modalı =================
+  var currentPreviewFilenameNo = '';
+  function openPreviewModal(state, isNew){
+    currentPreviewFilenameNo = state.offerNo || 'teklif';
+    var built = buildSheetHTML(state);
+    document.getElementById('modalSheet').innerHTML = built.html;
+    document.getElementById('previewModalTitle').textContent = isNew ? 'Teklif Oluşturuldu — Önizleme' : 'Teklif Önizleme';
+    document.getElementById('modalStatusMsg').textContent = ''; document.getElementById('modalStatusMsg').className = 'status-msg';
+    document.getElementById('previewModal').style.display = 'flex';
+  }
+  document.getElementById('previewModalClose').addEventListener('click', function(){ document.getElementById('previewModal').style.display = 'none'; });
+  document.getElementById('modalDownloadBtn').addEventListener('click', function(){
+    generatePdfFromElement('modalSheet', asciiSlug(TENANT.data && TENANT.data.name) + '_Teklif_' + String(currentPreviewFilenameNo).replace(/[^a-zA-Z0-9-_]/g, '_') + '.pdf', 'modalStatusMsg', document.getElementById('modalDownloadBtn'));
+  });
+
+  function generatePdfFromElement(elementId, filename, statusElId, btnEl){
+    var statusEl = document.getElementById(statusElId);
+    btnEl.disabled = true;
+    statusEl.textContent = 'PDF oluşturuluyor…'; statusEl.className = 'status-msg';
+    var sheetEl = document.getElementById(elementId);
+    html2canvas(sheetEl, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function(canvas){
+      var jsPDFCtor = window.jspdf.jsPDF;
+      var pdf = new jsPDFCtor({ unit:'mm', format:'a4', orientation:'portrait' });
+      var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+      var imgW = pageW, imgH = (canvas.height * imgW) / canvas.width;
+      if (imgH <= pageH) {
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, imgH);
+      } else {
+        var remainingHeightPx = canvas.height;
+        var pageHeightPx = (pageH * canvas.width) / imgW;
+        var yPx = 0, pageIdx = 0;
+        while (remainingHeightPx > 0) {
+          var sliceHeightPx = Math.min(pageHeightPx, remainingHeightPx);
+          var sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width; sliceCanvas.height = sliceHeightPx;
+          var ctx = sliceCanvas.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(canvas, 0, yPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+          var sliceImgH = (sliceHeightPx * imgW) / canvas.width;
+          if (pageIdx > 0) pdf.addPage();
+          pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, sliceImgH);
+          yPx += sliceHeightPx; remainingHeightPx -= sliceHeightPx; pageIdx++;
+        }
+      }
+      finishDownload(pdf.output('blob'), filename, statusEl, btnEl);
+    }).catch(function(err){
+      console.error(err);
+      statusEl.textContent = 'PDF oluşturulurken bir hata oluştu.'; statusEl.className = 'status-msg err';
+      btnEl.disabled = false;
+    });
+  }
+  function finishDownload(blob, filename, statusEl, btnEl){
+    if (window.claude && typeof window.claude.use === 'function') {
+      window.claude.use('downloads').then(function(downloads){
+        if (!downloads) { fallbackDownload(blob, filename, statusEl); btnEl.disabled = false; return; }
+        downloads.save({ filename: filename, data: blob }).then(function(res){
+          statusEl.textContent = 'PDF indirildi (' + res.status + ').'; statusEl.className = 'status-msg ok';
+          btnEl.disabled = false;
+        }).catch(function(err){
+          if (err && err.code === 'declined') { statusEl.textContent = 'İndirme iptal edildi.'; }
+          else { console.error(err); fallbackDownload(blob, filename, statusEl); }
+          btnEl.disabled = false;
+        });
+      }).catch(function(){ fallbackDownload(blob, filename, statusEl); btnEl.disabled = false; });
+    } else { fallbackDownload(blob, filename, statusEl); btnEl.disabled = false; }
+  }
+  function fallbackDownload(blob, filename, statusEl){
+    try {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+      statusEl.textContent = 'PDF indirildi.'; statusEl.className = 'status-msg ok';
+    } catch(e){ console.error(e); statusEl.textContent = 'İndirme desteklenmiyor.'; statusEl.className = 'status-msg err'; }
+  }
+
+  // ================= Teklifi Oluştur =================
+  var createBtn = document.getElementById('createBtn');
+  var statusMsg = document.getElementById('statusMsg');
+  createBtn.addEventListener('click', function(){
+    var state = readFormState();
+    if (!state.items.length) { statusMsg.textContent = 'En az bir ürün ekleyin.'; statusMsg.className = 'status-msg err'; return; }
+
+    if (editingQuoteRef) {
+      createBtn.disabled = true;
+      statusMsg.textContent = 'Teklif güncelleniyor…'; statusMsg.className = 'status-msg';
+      var builtEdit = buildSheetHTML(state);
+      var updatedRecord = Object.assign({}, state, { subtotal: builtEdit.totals.subtotal, vatAmount: builtEdit.totals.vatAmount, grandTotal: builtEdit.totals.grandTotal, sym: builtEdit.totals.sym });
+
+      if (editingQuoteRef.mode === 'cloud') {
+        quotesColRef.doc(editingQuoteRef.id).update(updatedRecord).then(function(){
+          statusMsg.textContent = 'Teklif güncellendi.'; statusMsg.className = 'status-msg ok';
+          createBtn.disabled = false;
+          openPreviewModal(updatedRecord, false);
+          exitQuoteEditMode();
+        }).catch(function(err){
+          statusMsg.textContent = 'Güncelleme hatası: ' + err.message; statusMsg.className = 'status-msg err';
+          createBtn.disabled = false;
+        });
+      } else {
+        var arr = getLocalArchive();
+        if (arr[editingQuoteRef.idx]) {
+          arr[editingQuoteRef.idx] = updatedRecord;
+          saveLocalArchive(arr);
+          renderArchive();
+        }
+        statusMsg.textContent = 'Teklif güncellendi.'; statusMsg.className = 'status-msg ok';
+        createBtn.disabled = false;
+        openPreviewModal(updatedRecord, false);
+        exitQuoteEditMode();
+      }
+      return;
+    }
+
+    createBtn.disabled = true;
+    statusMsg.textContent = 'Teklif oluşturuluyor…'; statusMsg.className = 'status-msg';
+    var built = buildSheetHTML(state);
+    var fullRecord = Object.assign({}, state, { subtotal: built.totals.subtotal, vatAmount: built.totals.vatAmount, grandTotal: built.totals.grandTotal, sym: built.totals.sym });
+
+    quotesColRef.add(fullRecord).then(function(created){
+      fullRecord = created;
+      offerNoUserEdited = false; advanceOfferNoField();
+      offerNoUserEdited = false;
+      resetFormForNewOffer();
+      recalc();
+      openPreviewModal(fullRecord, true);
+      statusMsg.textContent = 'Teklif oluşturuldu.'; statusMsg.className = 'status-msg ok';
+      createBtn.disabled = false;
+    }).catch(function(err){
+      console.error('Teklif kaydedilemedi:', err);
+      statusMsg.textContent = 'Teklif kaydedilemedi: ' + friendlyErr(err) + ' Bağlantınızı kontrol edip tekrar deneyin.';
+      statusMsg.className = 'status-msg err';
+      createBtn.disabled = false;
+    });
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
