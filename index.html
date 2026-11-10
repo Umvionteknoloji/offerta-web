@@ -185,6 +185,7 @@
   .sh-totals-box{ width:260px; }
   .sh-totals-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:12.5px; }
   .sh-totals-row.grand{ border-top:2px solid #14213D; margin-top:4px; padding-top:10px; font-size:15.5px; font-weight:800; color:#14213D; }
+  .sh-totals-row.disc{ color:#B3261E; }
   .sh-totals-row .amt{ font-family:'IBM Plex Mono', var(--mono-fallback); }
   .sh-notes{ margin-top:30px; font-size:11px; color:#3A4A6B; line-height:1.7; white-space:pre-wrap; }
   .sh-notes-label{ font-size:10px; color:#6B7383; font-weight:700; margin-bottom:5px; }
@@ -465,6 +466,15 @@
         <div id="itemsWrap"></div>
         <button class="add-btn" id="addItemBtn" type="button">+ Boş Ürün Satırı Ekle</button>
         <button class="add-btn" id="goToProductsBtn" type="button" style="margin-top:8px;">+ Ürün Girişi menüsüne git</button>
+
+        <h2>Özel İndirim</h2>
+        <div class="row2">
+          <div class="field"><label for="discountType">İndirim Türü</label>
+            <select id="discountType"><option value="percent">Yüzde (%)</option><option value="amount">Tutar</option></select></div>
+          <div class="field"><label for="discountValue" id="discountValueLabel">İndirim Oranı (%)</label>
+            <input id="discountValue" type="number" autocomplete="off" min="0" step="0.01" placeholder="boş = indirim yok" /></div>
+        </div>
+        <div class="hint" id="discountHint" style="margin:-6px 0 12px;">Ürünleri liste fiyatıyla girin; indirim, KDV hariç toplamdan düşülür ve KDV indirimli tutar üzerinden hesaplanır.</div>
 
         <h2>Vergi ve Notlar</h2>
         <div class="field"><label for="vatRate">KDV Oranı (%)</label><input id="vatRate" type="number" autocomplete="off" value="20" min="0" step="0.5" /></div>
@@ -1781,9 +1791,15 @@
         '<td class="num">' + sym + ' ' + fmt(effectiveUnitPrice) + '</td>' +
         '<td class="num"><b>' + sym + ' ' + fmt(lineTotal) + '</b></td></tr>';
     });
+    // Özel indirim: KDV hariç liste toplamı üzerinden yüzde ya da tutar; KDV indirimli tutar üzerinden hesaplanır
+    var discType = state.discountType === 'amount' ? 'amount' : 'percent';
+    var discVal = Math.max(0, parseFloat(state.discountValue) || 0);
+    var discountAmount = discType === 'percent' ? subtotal * Math.min(discVal, 100) / 100 : Math.min(discVal, subtotal);
+    discountAmount = Math.round(discountAmount * 100) / 100;
+    var netTotal = subtotal - discountAmount;
     var vatRate = state.vatRate || 0;
-    var vatAmount = subtotal * vatRate / 100;
-    var grandTotal = subtotal + vatAmount;
+    var vatAmount = netTotal * vatRate / 100;
+    var grandTotal = netTotal + vatAmount;
     var tableBody = rows || '<tr><td colspan="5" class="sh-empty-hint">Henüz ürün eklenmedi.</td></tr>';
     var html =
       '<div class="sh-top"><div class="sh-brand">' +
@@ -1804,14 +1820,17 @@
       '<table class="sh-table"><thead><tr><th class="num">#</th><th>Ürün</th><th class="num">Adet</th><th class="num">Birim Fiyat</th><th class="num">Toplam</th></tr></thead>' +
         '<tbody>' + tableBody + '</tbody></table>' +
       '<div class="sh-totals"><div class="sh-totals-box">' +
-        '<div class="sh-totals-row"><span>Ara Toplam</span><span class="amt">' + sym + ' ' + fmt(subtotal) + '</span></div>' +
+        '<div class="sh-totals-row"><span>' + (discountAmount > 0 ? 'Ara Toplam (Liste Fiyatı)' : 'Ara Toplam') + '</span><span class="amt">' + sym + ' ' + fmt(subtotal) + '</span></div>' +
+        (discountAmount > 0 ?
+          '<div class="sh-totals-row disc"><span>Özel İndirim' + (discType === 'percent' ? ' (%' + fmt(Math.min(discVal, 100)).replace(/,00$/, '').replace(/(,\d)0$/, '$1') + ')' : '') + '</span><span class="amt">− ' + sym + ' ' + fmt(discountAmount) + '</span></div>' +
+          '<div class="sh-totals-row"><span>İndirimli Toplam</span><span class="amt">' + sym + ' ' + fmt(netTotal) + '</span></div>' : '') +
         '<div class="sh-totals-row"><span>KDV (%' + fmt(vatRate).replace(/,00$/,'') + ')</span><span class="amt">' + sym + ' ' + fmt(vatAmount) + '</span></div>' +
         '<div class="sh-totals-row grand"><span>Genel Toplam</span><span class="amt">' + sym + ' ' + fmt(grandTotal) + '</span></div></div></div>' +
       (state.terms || state.notes ? '<div class="sh-notes">' +
           (state.terms ? '<div class="sh-notes-label">ÖDEME / TESLİMAT</div>' + escapeHtml(state.terms) : '') +
           (state.notes ? (state.terms ? '<br/><br/>' : '') + '<div class="sh-notes-label">NOTLAR</div>' + escapeHtml(state.notes) : '') + '</div>' : '') +
       '<div class="sh-footer"><span>' + escapeHtml(state.companyName) + '</span><span>Bu teklif ' + escapeHtml(String(state.validity)) + ' gün geçerlidir.</span></div>';
-    return { html: html, totals: { subtotal: subtotal, vatAmount: vatAmount, grandTotal: grandTotal, sym: sym } };
+    return { html: html, totals: { subtotal: subtotal, discountAmount: discountAmount, netTotal: netTotal, vatAmount: vatAmount, grandTotal: grandTotal, sym: sym } };
   }
 
   function readFormState(){
@@ -1832,6 +1851,8 @@
       custContact: document.getElementById('custContact').value,
       custPhone: document.getElementById('custPhone').value,
       custEmail: document.getElementById('custEmail').value,
+      discountType: document.getElementById('discountType').value,
+      discountValue: parseFloat(document.getElementById('discountValue').value) || 0,
       vatRate: parseFloat(document.getElementById('vatRate').value) || 0,
       terms: document.getElementById('terms').value,
       notes: document.getElementById('notes').value,
@@ -1839,10 +1860,23 @@
     };
   }
 
+  // İndirim alanının etiketi ve canlı özet (tutar / indirimli toplam)
+  function updateDiscountUi(state, built){
+    var isPct = state.discountType !== 'amount', sym = built.totals.sym || '';
+    document.getElementById('discountValueLabel').textContent = isPct ? 'İndirim Oranı (%)' : 'İndirim Tutarı (' + sym + ')';
+    var hint = document.getElementById('discountHint');
+    var base = 'Ürünleri liste fiyatıyla girin; indirim, KDV hariç toplamdan düşülür ve KDV indirimli tutar üzerinden hesaplanır.';
+    var raw = parseFloat(document.getElementById('discountValue').value) || 0;
+    if (built.totals.discountAmount > 0) {
+      var capped = (isPct && raw > 100) || (!isPct && raw > built.totals.subtotal);
+      hint.textContent = 'İndirim: − ' + sym + ' ' + fmt(built.totals.discountAmount) + ' · İndirimli toplam (KDV hariç): ' + sym + ' ' + fmt(built.totals.netTotal) + (capped ? ' (indirim toplamı aşamaz; sınırlandı)' : '');
+    } else hint.textContent = base;
+  }
   function recalc(){
     var state = readFormState();
     var built = buildSheetHTML(state);
     document.getElementById('sheet').innerHTML = built.html;
+    updateDiscountUi(state, built);
     items.forEach(function(it){
       var effectiveUnitPrice = (it.data.price || 0) * (1 + (it.data.marginPercent || 0) / 100);
       var lineTotal = (it.data.qty || 0) * effectiveUnitPrice;
@@ -1850,7 +1884,7 @@
       if (el) el.textContent = built.totals.sym + ' ' + fmt(lineTotal);
     });
   }
-  var fieldIds = ['companyName','companyAddr','companyPhone','companyEmail','companyTax','offerNo','offerDate','validity','currency','preparedBy','preparedByPhone','preparedByEmail','custName','custContact','custPhone','custEmail','vatRate','terms','notes'];
+  var fieldIds = ['companyName','companyAddr','companyPhone','companyEmail','companyTax','offerNo','offerDate','validity','currency','preparedBy','preparedByPhone','preparedByEmail','custName','custContact','custPhone','custEmail','discountType','discountValue','vatRate','terms','notes'];
   fieldIds.forEach(function(id){ var el = document.getElementById(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
 
   recalc();
@@ -2024,6 +2058,7 @@
     document.getElementById('custPicker').value = '';
     document.getElementById('notes').value = defaultNotes();
     document.getElementById('offerDate').value = todayISO();
+    document.getElementById('discountType').value = 'percent'; document.getElementById('discountValue').value = '';
   }
 
   // ================= Bekleyen teklifi içerikle düzenleme =================
@@ -2051,6 +2086,8 @@
     document.getElementById('custPhone').value = record.custPhone || '';
     document.getElementById('custEmail').value = record.custEmail || '';
     document.getElementById('vatRate').value = (record.vatRate != null ? record.vatRate : 20);
+    document.getElementById('discountType').value = record.discountType === 'amount' ? 'amount' : 'percent';
+    document.getElementById('discountValue').value = record.discountValue ? record.discountValue : '';
     document.getElementById('terms').value = record.terms || '';
     document.getElementById('notes').value = record.notes || '';
 
@@ -2163,12 +2200,16 @@
   createBtn.addEventListener('click', function(){
     var state = readFormState();
     if (!state.items.length) { statusMsg.textContent = 'En az bir ürün ekleyin.'; statusMsg.className = 'status-msg err'; return; }
+    var rawDisc = parseFloat(document.getElementById('discountValue').value);
+    if (document.getElementById('discountValue').value !== '' && (isNaN(rawDisc) || rawDisc < 0)) { statusMsg.textContent = 'İndirim değeri 0 veya daha büyük bir sayı olmalı.'; statusMsg.className = 'status-msg err'; return; }
+    if (state.discountType === 'percent' && rawDisc > 100) { statusMsg.textContent = 'İndirim oranı en fazla %100 olabilir.'; statusMsg.className = 'status-msg err'; return; }
+    if (state.discountType === 'amount' && rawDisc > buildSheetHTML(state).totals.subtotal) { statusMsg.textContent = 'İndirim tutarı ara toplamı aşamaz.'; statusMsg.className = 'status-msg err'; return; }
 
     if (editingQuoteRef) {
       createBtn.disabled = true;
       statusMsg.textContent = 'Teklif güncelleniyor…'; statusMsg.className = 'status-msg';
       var builtEdit = buildSheetHTML(state);
-      var updatedRecord = Object.assign({}, state, { subtotal: builtEdit.totals.subtotal, vatAmount: builtEdit.totals.vatAmount, grandTotal: builtEdit.totals.grandTotal, sym: builtEdit.totals.sym });
+      var updatedRecord = Object.assign({}, state, { subtotal: builtEdit.totals.subtotal, discountAmount: builtEdit.totals.discountAmount, netTotal: builtEdit.totals.netTotal, vatAmount: builtEdit.totals.vatAmount, grandTotal: builtEdit.totals.grandTotal, sym: builtEdit.totals.sym });
 
       if (editingQuoteRef.mode === 'cloud') {
         quotesColRef.doc(editingQuoteRef.id).update(updatedRecord).then(function(){
@@ -2198,7 +2239,7 @@
     createBtn.disabled = true;
     statusMsg.textContent = 'Teklif oluşturuluyor…'; statusMsg.className = 'status-msg';
     var built = buildSheetHTML(state);
-    var fullRecord = Object.assign({}, state, { subtotal: built.totals.subtotal, vatAmount: built.totals.vatAmount, grandTotal: built.totals.grandTotal, sym: built.totals.sym });
+    var fullRecord = Object.assign({}, state, { subtotal: built.totals.subtotal, discountAmount: built.totals.discountAmount, netTotal: built.totals.netTotal, vatAmount: built.totals.vatAmount, grandTotal: built.totals.grandTotal, sym: built.totals.sym });
 
     quotesColRef.add(fullRecord).then(function(created){
       fullRecord = created;
