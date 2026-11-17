@@ -245,7 +245,18 @@
   .hist-filters{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin:6px 0 4px; }
   .hist-filters .field{ margin:0; }
   .hist-bar{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0 14px; }
-  .hist-board{ display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; align-items:start; }
+  .hist-board{ display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 420px)); gap:14px; align-items:start; justify-content:start; }
+  .field-wide{ grid-column:span 2; }
+  @media (max-width:520px){ .field-wide{ grid-column:span 1; } }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); border-radius:20px; padding:7px 12px; font-size:12.5px; cursor:pointer; font-family:inherit; line-height:1.2; }
+  .chip:hover{ border-color:var(--amber); }
+  .chip.active{ color:#fff; font-weight:700; border-color:transparent; }
+  .chip-all.active{ background:var(--amber); color:#1a1200; }
+  .chip[data-st="pending"].active{ background:#8A94A6; }
+  .chip[data-st="onaylandi"].active{ background:#2E7D4F; }
+  .chip[data-st="faturalandi"].active{ background:#2952A3; }
+  .chip[data-st="reddedildi"].active{ background:#B3261E; }
   .hist-col{ background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; min-width:0; }
   .hist-col-head{ border-top:4px solid var(--muted); background:var(--paper); border-radius:6px; padding:9px 11px; margin-bottom:10px; border-left:1px solid var(--line-soft); border-right:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
   .hist-col-title{ font-weight:800; font-size:13.5px; color:var(--ink); display:flex; align-items:center; gap:7px; }
@@ -601,8 +612,14 @@
           <div class="hist-filters">
             <div class="field"><label for="fltBrand">Marka</label><select id="fltBrand"><option value="">Tüm markalar</option></select></div>
             <div class="field"><label for="fltProduct">Ürün</label><select id="fltProduct"><option value="">Tüm ürünler</option></select></div>
-            <div class="field"><label for="fltStatus">Durum</label>
-              <select id="fltStatus"><option value="all">Tüm durumlar</option><option value="pending">Onay Bekliyor</option><option value="onaylandi">Onaylandı</option><option value="faturalandi">Faturalandı</option><option value="reddedildi">Onaylanmadı</option></select></div>
+            <div class="field field-wide"><label>Durum <span style="font-weight:400;">(birden fazla seçilebilir)</span></label>
+              <div class="chips" id="fltStatusChips">
+                <button type="button" class="chip chip-all active" data-st="all">Tümü</button>
+                <button type="button" class="chip" data-st="pending">Onay Bekliyor</button>
+                <button type="button" class="chip" data-st="onaylandi">Onaylandı</button>
+                <button type="button" class="chip" data-st="faturalandi">Faturalandı</button>
+                <button type="button" class="chip" data-st="reddedildi">Onaylanmadı</button>
+              </div></div>
             <div class="field"><label for="fltFrom">Tarih (başlangıç)</label><input id="fltFrom" type="date" /></div>
             <div class="field"><label for="fltTo">Tarih (bitiş)</label><input id="fltTo" type="date" /></div>
             <div class="field"><label for="fltSearch">Ara (teklif no / müşteri)</label><input id="fltSearch" autocomplete="off" placeholder="Örn. Boyner" /></div>
@@ -2022,7 +2039,7 @@
   var BOARD_ORDER = ['pending', 'onaylandi', 'faturalandi', 'reddedildi'];
   var CHART_ORDER = ['faturalandi', 'pending', 'onaylandi', 'reddedildi'];
   var NO_BRAND = 'Markasız';
-  var hist = { brand: '', product: '', status: 'all', from: '', to: '', q: '', rptMode: 'brand', chartMetric: 'count' };
+  var hist = { brand: '', product: '', statuses: [], from: '', to: '', q: '', rptMode: 'brand', chartMetric: 'count' };
 
   function keyOf(r){ return (r.status === 'onaylandi' || r.status === 'faturalandi' || r.status === 'reddedildi') ? r.status : 'pending'; }
   function catalogBrandMap(){
@@ -2039,7 +2056,7 @@
     return true;
   }
   function matchQuote(r, map, ignoreStatus){
-    if (!ignoreStatus && hist.status !== 'all' && keyOf(r) !== hist.status) return false;
+    if (!ignoreStatus && hist.statuses.length && hist.statuses.indexOf(keyOf(r)) < 0) return false;
     if (hist.from && String(r.date || '') < hist.from) return false;
     if (hist.to && String(r.date || '') > hist.to) return false;
     if (hist.q) {
@@ -2086,6 +2103,24 @@
       '</div>';
   }
 
+  function renderStatusChips(){
+    gid('fltStatusChips').querySelectorAll('.chip').forEach(function(b){
+      var st = b.getAttribute('data-st');
+      var on = st === 'all' ? !hist.statuses.length : hist.statuses.indexOf(st) > -1;
+      b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  gid('fltStatusChips').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-st]'); if (!b) return;
+    var st = b.getAttribute('data-st');
+    if (st === 'all') hist.statuses = [];
+    else {
+      var i = hist.statuses.indexOf(st);
+      if (i > -1) hist.statuses.splice(i, 1); else hist.statuses.push(st);
+      if (hist.statuses.length === BOARD_ORDER.length) hist.statuses = [];      // hepsi seçilince "Tümü" ile aynı
+    }
+    renderStatusChips(); renderHistoryView();
+  });
   function renderFilterOptions(arr){
     var map = catalogBrandMap(), brands = {}, prods = {};
     arr.forEach(function(r){ (r.items || []).forEach(function(it){ brands[brandOfItem(it, map) || NO_BRAND] = 1; prods[productOfItem(it)] = 1; }); });
@@ -2096,11 +2131,11 @@
     var optsOf = function(list, all, cur){ return '<option value="">' + all + '</option>' + list.map(function(x){ return '<option value="' + escapeAttr(x) + '"' + (x === cur ? ' selected' : '') + '>' + escapeHtml(x) + '</option>'; }).join(''); };
     gid('fltBrand').innerHTML = optsOf(bl, 'Tüm markalar', hist.brand);
     gid('fltProduct').innerHTML = optsOf(pl, 'Tüm ürünler', hist.product);
-    gid('fltStatus').value = hist.status;
+    renderStatusChips();
   }
 
   function renderBoard(arr, map){
-    var cols = BOARD_ORDER.filter(function(k){ return hist.status === 'all' || hist.status === k; });
+    var cols = BOARD_ORDER.filter(function(k){ return !hist.statuses.length || hist.statuses.indexOf(k) > -1; });
     var buckets = { pending: [], onaylandi: [], faturalandi: [], reddedildi: [] }, shown = 0;
     arr.forEach(function(r, idx){ if (matchQuote(r, map, false)) { buckets[keyOf(r)].push({ r: r, idx: idx }); shown++; } });
     gid('archiveList').innerHTML = cols.map(function(k){
@@ -2110,7 +2145,7 @@
         '<div class="hist-col-sum">' + sumsHtml(b) + '</div></div>' +
         (b.length ? b.map(function(x){ return cardHtml(x.r, x.idx); }).join('') : '<div class="hist-col-empty">Kayıt yok</div>') + '</div>';
     }).join('');
-    var filtered = hist.brand || hist.product || hist.status !== 'all' || hist.from || hist.to || hist.q;
+    var filtered = hist.brand || hist.product || hist.statuses.length || hist.from || hist.to || hist.q;
     gid('histSummary').textContent = shown + ' teklif gösteriliyor' + (filtered ? ' (toplam ' + arr.length + ')' : '');
   }
 
@@ -2221,13 +2256,13 @@
     renderFilterOptions(arr);
     renderHistoryView();
   }
-  [['fltBrand', 'brand'], ['fltProduct', 'product'], ['fltStatus', 'status'], ['fltFrom', 'from'], ['fltTo', 'to'], ['fltSearch', 'q']].forEach(function(p){
+  [['fltBrand', 'brand'], ['fltProduct', 'product'], ['fltFrom', 'from'], ['fltTo', 'to'], ['fltSearch', 'q']].forEach(function(p){
     var el = gid(p[0]);
     var handler = function(){ hist[p[1]] = el.value; renderHistoryView(); };
     el.addEventListener('change', handler); el.addEventListener('input', handler);
   });
   gid('fltClear').addEventListener('click', function(){
-    hist.brand = ''; hist.product = ''; hist.status = 'all'; hist.from = ''; hist.to = ''; hist.q = '';
+    hist.brand = ''; hist.product = ''; hist.statuses = []; hist.from = ''; hist.to = ''; hist.q = '';
     gid('fltFrom').value = ''; gid('fltTo').value = ''; gid('fltSearch').value = '';
     renderFilterOptions(getArchiveArray()); renderHistoryView();
   });
