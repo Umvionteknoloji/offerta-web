@@ -240,6 +240,38 @@
   .user-row .u-meta{ font-size:12px; color:var(--muted); margin-top:2px; }
   .user-row .u-actions{ display:flex; gap:6px; flex-wrap:wrap; }
   .user-label{ cursor:pointer; text-decoration:underline dotted; }
+  /* ---- Geçmiş teklifler: pano, filtre, rapor, grafik ---- */
+  .hist-wide{ max-width:1320px; }
+  .hist-filters{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin:6px 0 4px; }
+  .hist-filters .field{ margin:0; }
+  .hist-bar{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0 14px; }
+  .hist-board{ display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:14px; align-items:start; }
+  .hist-col{ background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; min-width:0; }
+  .hist-col-head{ border-top:4px solid var(--muted); background:var(--paper); border-radius:6px; padding:9px 11px; margin-bottom:10px; border-left:1px solid var(--line-soft); border-right:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); }
+  .hist-col-title{ font-weight:800; font-size:13.5px; color:var(--ink); display:flex; align-items:center; gap:7px; }
+  .hist-col-count{ background:var(--bg); border:1px solid var(--line); border-radius:20px; font-size:11px; padding:1px 8px; font-weight:700; color:var(--ink-soft); }
+  .hist-col-sum{ font-family:'IBM Plex Mono', var(--mono-fallback); font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.5; }
+  .hist-col-empty{ font-size:12px; color:var(--muted); text-align:center; padding:14px 6px; }
+  .hist-col .quote-card{ padding:11px 12px; margin-bottom:9px; }
+  .hist-col .quote-card-top{ display:block; }
+  .hist-col .quote-card-right{ text-align:left; margin-top:6px; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+  .hist-col .quote-card-name{ font-size:14px; word-break:break-word; }
+  .hist-section{ margin-top:30px; padding-top:18px; border-top:1px solid var(--line); }
+  .hist-section-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .hist-section-title{ font-size:15px; font-weight:800; color:var(--ink); margin-right:auto; }
+  .seg{ display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .seg-btn{ background:var(--paper); border:none; padding:6px 12px; font-size:12px; color:var(--ink-soft); cursor:pointer; font-family:inherit; border-right:1px solid var(--line); }
+  .seg-btn:last-child{ border-right:none; }
+  .seg-btn.active{ background:var(--amber); color:#1a1200; font-weight:700; }
+  .data-table tfoot td{ font-weight:800; background:var(--bg); border-top:1px solid var(--line); }
+  .rpt-wrap{ overflow-x:auto; }
+  .chart-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 560px)); gap:16px; justify-content:start; }
+  .chart-box{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .chart-title{ font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+  .chart-box svg{ width:100%; height:auto; display:block; }
+  .chart-box .ax{ fill:var(--muted); font-size:11px; font-family:inherit; }
+  .chart-box .gl{ stroke:var(--line); stroke-width:1; }
+  .chart-box .val{ fill:var(--ink); font-size:12px; font-weight:700; font-family:inherit; }
 </style>
 </head>
 <body>
@@ -376,6 +408,7 @@
       <div class="screen-sub">Ürün kataloğunuza yeni ürün ekleyin veya mevcutları yönetin.</div>
       <button class="picker-btn" id="backToQuoteFromProductsBtn" type="button" style="margin-bottom:20px;">← Teklife Dön</button>
 
+      <div class="field"><label for="prodFormBrand">Marka (opsiyonel — marka bazlı raporlama için)</label><input id="prodFormBrand" autocomplete="off" placeholder="Örn. Newland" /></div>
       <div class="field"><label for="prodFormName">Ürün / Model Adı</label><input id="prodFormName" autocomplete="off" placeholder="Örn. Masaüstü Barkod Okuyucu" /></div>
       <div class="field"><label for="prodFormDesc">Açıklama (opsiyonel)</label><input id="prodFormDesc" autocomplete="off" placeholder="Örn. Kablosuz, 2D imager, USB dock dahil" /></div>
       <div class="row3">
@@ -399,7 +432,7 @@
       <div id="productsListWrap">
         <div class="empty-hint" id="productsEmpty">Henüz ürün eklenmedi.</div>
         <table class="data-table" id="productsTable" style="display:none;">
-          <thead><tr><th>Ürün</th><th class="num">Alış Fiyatı</th><th class="num">% Marj</th><th>Para B.</th><th></th></tr></thead>
+          <thead><tr><th>Marka</th><th>Ürün</th><th class="num">Alış Fiyatı</th><th class="num">% Marj</th><th>Para B.</th><th></th></tr></thead>
           <tbody id="productsTbody"></tbody>
         </table>
       </div>
@@ -463,6 +496,7 @@
           </div>
           <button class="picker-btn" id="addFromCatalogBtn" type="button">Listeye Ekle</button>
         </div>
+        <datalist id="brandList"></datalist>
         <div id="itemsWrap"></div>
         <button class="add-btn" id="addItemBtn" type="button">+ Boş Ürün Satırı Ekle</button>
         <button class="add-btn" id="goToProductsBtn" type="button" style="margin-top:8px;">+ Ürün Girişi menüsüne git</button>
@@ -558,13 +592,51 @@
 
   <!-- ================= GEÇMİŞ TEKLİFLER ================= -->
   <div class="screen" id="screen-history">
-    <div class="list-screen">
+    <div class="list-screen hist-wide">
       <div class="screen-title">Geçmiş Teklifler <span id="archiveCount" style="color:var(--muted); font-weight:500; font-size:14px;"></span></div>
-      <div class="screen-sub">Hangi firmaya ne teklif verildiğinin özeti. Görüntüle'ye basarak PDF'i tekrar indirebilirsiniz.</div>
+      <div class="screen-sub">Teklifler duruma göre yan yana gruplanır. Marka, ürün, durum ve tarihe göre süzün; aşağıda rapor ve grafik aynı süzgeci izler.</div>
       <div id="archiveWrap">
         <div class="empty-hint" id="archiveEmpty">Henüz oluşturulmuş bir teklif yok.</div>
-        <div id="archiveList" style="display:none;"></div>
-        <button class="del-btn" id="clearArchiveBtn" type="button" style="display:none; margin-top:10px;">Geçmişi Temizle</button>
+        <div id="archiveContent" style="display:none;">
+          <div class="hist-filters">
+            <div class="field"><label for="fltBrand">Marka</label><select id="fltBrand"><option value="">Tüm markalar</option></select></div>
+            <div class="field"><label for="fltProduct">Ürün</label><select id="fltProduct"><option value="">Tüm ürünler</option></select></div>
+            <div class="field"><label for="fltStatus">Durum</label>
+              <select id="fltStatus"><option value="all">Tüm durumlar</option><option value="pending">Onay Bekliyor</option><option value="onaylandi">Onaylandı</option><option value="faturalandi">Faturalandı</option><option value="reddedildi">Onaylanmadı</option></select></div>
+            <div class="field"><label for="fltFrom">Tarih (başlangıç)</label><input id="fltFrom" type="date" /></div>
+            <div class="field"><label for="fltTo">Tarih (bitiş)</label><input id="fltTo" type="date" /></div>
+            <div class="field"><label for="fltSearch">Ara (teklif no / müşteri)</label><input id="fltSearch" autocomplete="off" placeholder="Örn. Boyner" /></div>
+          </div>
+          <div class="hist-bar"><span id="histSummary" class="hint"></span><button class="view-btn" id="fltClear" type="button">Filtreleri temizle</button></div>
+
+          <div id="archiveList" class="hist-board"></div>
+          <button class="del-btn" id="clearArchiveBtn" type="button" style="margin-top:10px;">Geçmişi Temizle</button>
+
+          <div class="hist-section">
+            <div class="hist-section-head">
+              <div class="hist-section-title">Rapor</div>
+              <div class="seg">
+                <button type="button" id="rptBrandBtn" class="seg-btn active">Marka bazında</button>
+                <button type="button" id="rptProductBtn" class="seg-btn">Ürün bazında</button>
+              </div>
+              <button class="view-btn" id="rptCsvBtn" type="button">CSV indir</button>
+            </div>
+            <div class="hint" style="margin-bottom:8px;">Tutar = kalemlerin KDV hariç, özel indirim payı düşülmüş toplamı. Marka/ürün süzgeci seçiliyse yalnızca eşleşen kalemler sayılır.</div>
+            <div id="rptTableWrap"></div>
+          </div>
+
+          <div class="hist-section">
+            <div class="hist-section-head">
+              <div class="hist-section-title">Duruma göre grafik</div>
+              <div class="seg">
+                <button type="button" id="chCountBtn" class="seg-btn active">Adet</button>
+                <button type="button" id="chAmountBtn" class="seg-btn">Tutar</button>
+              </div>
+            </div>
+            <div class="hint" style="margin-bottom:8px;">Grafik durum süzgecini dikkate almaz; diğer süzgeçleri izler. Tutar = teklif genel toplamı (KDV dahil), para birimi başına ayrı grafik.</div>
+            <div id="statusChart"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -700,6 +772,24 @@
     <div class="field"><label for="usPass">Şifre * (en az 6 karakter)</label><input id="usPass" type="text" autocomplete="off" /></div>
     <button class="generate-btn" id="usSave" type="button">Kaydet</button>
     <div class="status-msg" id="usMsg"></div>
+  </div>
+</div>
+
+<!-- Durum değiştir -->
+<div class="modal-overlay" id="statusModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="stsTitle">Durumu Değiştir</div>
+      <button class="modal-close" id="stsClose" type="button">✕</button>
+    </div>
+    <div class="hint" id="stsCurrent" style="margin-bottom:10px;"></div>
+    <div class="field"><label for="stsNew">Yeni durum</label>
+      <select id="stsNew"><option value="pending">Onay Bekliyor</option><option value="onaylandi">Onaylandı</option><option value="faturalandi">Faturalandı</option><option value="reddedildi">Onaylanmadı</option></select></div>
+    <div class="field" id="stsNoteWrap" style="display:none;"><label for="stsNote">Onaylanmama nedeni (opsiyonel)</label><input id="stsNote" autocomplete="off" /></div>
+    <div class="field" id="stsPinWrap" style="display:none;"><label for="stsPin">İşlem şifresi</label><input id="stsPin" type="password" autocomplete="off" /></div>
+    <div class="hint" id="stsAdminHint" style="display:none;">Bu işlem için şirket yöneticisi yetkisi gerekir (işlem şifresi tanımlı değil).</div>
+    <button class="generate-btn" id="stsSave" type="button">Durumu Kaydet</button>
+    <div class="status-msg" id="stsMsg"></div>
   </div>
 </div>
 
@@ -957,7 +1047,7 @@
 
   // ---- Veri katmanı: Firestore'a benzeyen ince bir yüzey (müşteri/ürün/teklif çağrıları API'ye çevrilir) ----
   function refreshCustomers(){ return api('GET', '/api/customers').then(function(a){ customersCache = a; renderCustomerPicker(); renderCustomersTable(); return a; }); }
-  function refreshProducts(){ return api('GET', '/api/products').then(function(a){ productsCache = a; renderProductPicker(); renderProductsTable(); return a; }); }
+  function refreshProducts(){ return api('GET', '/api/products').then(function(a){ productsCache = a; renderProductPicker(); renderProductsTable(); renderArchive(); return a; }); }
   function refreshQuotes(){ return api('GET', '/api/quotes').then(function(a){ archiveCache = a; renderArchive(); return a; }); }
   function refreshTenant(){
     return api('GET', '/api/tenant').then(function(t){ TENANT.data = t; applyTenantBranding(); applyTenantToForm(); applyRoleVisibility(); return t; });
@@ -1482,7 +1572,7 @@
   function uid(){ itemCount++; return 'it' + itemCount; }
   function addItem(prefill){
     var id = uid();
-    var data = Object.assign({ name:'', desc:'', qty:1, price:0, marginPercent:12 }, prefill || {});
+    var data = Object.assign({ name:'', brand:'', desc:'', qty:1, price:0, marginPercent:12 }, prefill || {});
     items.push({ id:id, data:data });
     renderItemCard(id, data);
     recalc();
@@ -1496,6 +1586,8 @@
         '<button class="remove-btn" type="button" data-id="' + id + '">Kaldır</button></div>' +
       '<div class="field"><label>Ürün / Model Adı</label>' +
         '<input class="f-name" autocomplete="off" data-id="' + id + '" value="' + escapeAttr(data.name) + '" placeholder="Örn. Masaüstü Barkod Okuyucu" /></div>' +
+      '<div class="field"><label>Marka (opsiyonel)</label>' +
+        '<input class="f-brand" list="brandList" autocomplete="off" data-id="' + id + '" value="' + escapeAttr(data.brand || '') + '" placeholder="Örn. Newland" /></div>' +
       '<div class="field"><label>Açıklama (opsiyonel)</label>' +
         '<input class="f-desc" autocomplete="off" data-id="' + id + '" value="' + escapeAttr(data.desc) + '" placeholder="Örn. Kablosuz, 2D imager, USB dock dahil" /></div>' +
       '<div class="row3">' +
@@ -1519,6 +1611,7 @@
     var it = items.find(function(x){ return x.id === id; });
     if (!it) return;
     if (t.classList.contains('f-name')) it.data.name = t.value;
+    else if (t.classList.contains('f-brand')) it.data.brand = t.value;
     else if (t.classList.contains('f-desc')) it.data.desc = t.value;
     else if (t.classList.contains('f-qty')) it.data.qty = parseFloat(t.value) || 0;
     else if (t.classList.contains('f-price')) it.data.price = parseFloat(t.value) || 0;
@@ -1658,8 +1751,10 @@
     var sel = document.getElementById('prodPicker');
     var list = cloudReady ? productsCache : getLocalProducts();
     sel.innerHTML = '<option value="">— Kataloğdan seçin —</option>' + list.map(function(p){
-      return '<option value="' + escapeAttr(p._id) + '">' + escapeHtml(p.name) + '</option>';
+      return '<option value="' + escapeAttr(p._id) + '">' + escapeHtml((p.brand ? p.brand + ' · ' : '') + p.name) + '</option>';
     }).join('');
+    var bl = document.getElementById('brandList');
+    if (bl) { var seen = {}; bl.innerHTML = list.filter(function(p){ var b = String(p.brand || '').trim(); if (!b || seen[b]) return false; seen[b] = 1; return true; }).map(function(p){ return '<option value="' + escapeAttr(p.brand) + '"></option>'; }).join(''); }
     document.getElementById('menuProductCount').textContent = list.length ? list.length + ' kayıtlı ürün' : '';
   }
   document.getElementById('addFromCatalogBtn').addEventListener('click', function(){
@@ -1667,7 +1762,7 @@
     var list = cloudReady ? productsCache : getLocalProducts();
     var p = list.find(function(x){ return x._id === id; });
     if (p) {
-      addItem({ name: p.name, desc: p.desc || '', qty: 1, price: p.costPrice || 0, marginPercent: (p.marginPercent != null ? p.marginPercent : 12) });
+      addItem({ name: p.name, brand: p.brand || '', desc: p.desc || '', qty: 1, price: p.costPrice || 0, marginPercent: (p.marginPercent != null ? p.marginPercent : 12) });
       if (p.currency) { document.getElementById('currency').value = p.currency; recalc(); }
     }
     sel.value = '';
@@ -1684,7 +1779,7 @@
     if (!list.length) { emptyEl.style.display = ''; tableEl.style.display = 'none'; return; }
     emptyEl.style.display = 'none'; tableEl.style.display = '';
     tbodyEl.innerHTML = list.map(function(p){
-      return '<tr><td>' + escapeHtml(p.name) + (p.desc ? '<div style="font-size:11px;color:var(--muted);">' + escapeHtml(p.desc) + '</div>' : '') + '</td>' +
+      return '<tr><td>' + escapeHtml(p.brand || '—') + '</td><td>' + escapeHtml(p.name) + (p.desc ? '<div style="font-size:11px;color:var(--muted);">' + escapeHtml(p.desc) + '</div>' : '') + '</td>' +
         '<td class="num">' + fmt(p.costPrice || 0) + '</td><td class="num">%' + fmt(p.marginPercent || 0).replace(/,00$/,'') + '</td>' +
         '<td>' + escapeHtml(CUR_SYMBOL[p.currency] || p.currency || 'TL') + '</td>' +
         '<td style="text-align:right; white-space:nowrap;">' +
@@ -1707,6 +1802,7 @@
       var p = list.find(function(x){ return x._id === id; });
       if (!p) return;
       editingProductId = id;
+      document.getElementById('prodFormBrand').value = p.brand || '';
       document.getElementById('prodFormName').value = p.name || '';
       document.getElementById('prodFormDesc').value = p.desc || '';
       document.getElementById('prodFormPrice').value = p.costPrice || '';
@@ -1722,6 +1818,7 @@
     editingProductId = null;
     document.getElementById('saveProductBtn').textContent = 'Ürünü Kaydet';
     document.getElementById('cancelProductEditBtn').style.display = 'none';
+    document.getElementById('prodFormBrand').value = '';
     document.getElementById('prodFormName').value = '';
     document.getElementById('prodFormDesc').value = '';
     document.getElementById('prodFormPrice').value = '';
@@ -1738,7 +1835,7 @@
     var currency = document.getElementById('prodFormCurrency').value;
     var statusEl = document.getElementById('productFormStatus');
     if (!name) { statusEl.textContent = 'Ürün adı gerekli.'; statusEl.className = 'status-msg err'; return; }
-    var record = { name: name, desc: desc, costPrice: price, marginPercent: margin, currency: currency };
+    var record = { name: name, brand: document.getElementById('prodFormBrand').value.trim(), desc: desc, costPrice: price, marginPercent: margin, currency: currency };
 
     if (editingProductId) {
       var idToUpdate = editingProductId;
@@ -1760,6 +1857,7 @@
 
     function afterSave(){
       statusEl.textContent = 'Kaydedildi.'; statusEl.className = 'status-msg ok';
+      document.getElementById('prodFormBrand').value = '';
       document.getElementById('prodFormName').value = '';
       document.getElementById('prodFormDesc').value = '';
       document.getElementById('prodFormPrice').value = '';
@@ -1911,50 +2009,262 @@
         '<div style="font-size:10px; color:var(--muted);">' + escapeHtml(formatDateTR(r.statusDate)) + '</div>' +
         (r.rejectNote ? '<div style="font-size:10.5px; color:var(--ink-soft); font-style:italic; max-width:220px; margin-top:2px;" title="' + escapeAttr(r.rejectNote) + '">"' + escapeHtml(r.rejectNote) + '"</div>' : '');
     }
-    return '<span style="color:var(--muted);">Bekliyor</span>';
+    return '<span style="color:var(--muted); font-weight:700;">Onay Bekliyor</span>';
   }
 
-  function renderArchive(){
-    var arr = cloudReady ? archiveCache : getLocalArchive();
-    var emptyEl = document.getElementById('archiveEmpty');
-    var listEl = document.getElementById('archiveList');
-    var countEl = document.getElementById('archiveCount');
-    var clearBtn = document.getElementById('clearArchiveBtn');
-    countEl.textContent = arr.length ? '(' + arr.length + ')' : '';
-    document.getElementById('menuHistoryCount').textContent = arr.length ? arr.length + ' teklif' : '';
-    if (!arr.length) { emptyEl.style.display = ''; listEl.style.display = 'none'; clearBtn.style.display = 'none'; return; }
-    emptyEl.style.display = 'none'; listEl.style.display = ''; clearBtn.style.display = '';
-    listEl.innerHTML = arr.map(function(r, idx){
-      var sym = r.sym || (CUR_SYMBOL[r.currency] || '');
-      var approveBtn = (r.status === 'onaylandi' || r.status === 'reddedildi' || r.status === 'faturalandi') ? '' :
-        '<button class="view-btn" type="button" data-act="approve" data-idx="' + idx + '">Onaylandı</button>';
-      var rejectBtn = (r.status === 'onaylandi' || r.status === 'reddedildi' || r.status === 'faturalandi') ? '' :
-        '<button class="view-btn" type="button" data-act="reject" data-idx="' + idx + '" style="color:#B3261E; border-color:#E8B4AE;">Onaylanmadı</button>';
-      var invoiceBtn = (r.status === 'onaylandi') ?
-        '<button class="view-btn" type="button" data-act="invoice" data-idx="' + idx + '">Faturalandı İşaretle</button>' : '';
-      var contentEditBtn = (!r.status) ?
-        '<button class="view-btn" type="button" data-act="contentEdit" data-idx="' + idx + '">İçeriği Düzenle</button>' : '';
-      return '<div class="quote-card">' +
-          '<div class="quote-card-top">' +
-            '<div>' +
-              '<div class="quote-card-id">' + escapeHtml(r.offerNo || '—') + '</div>' +
-              '<div class="quote-card-name">' + escapeHtml(r.custName || '—') + '</div>' +
-              '<div class="quote-card-meta">' + escapeHtml(formatDateTR(r.date)) + (r.preparedBy ? ' · ' + escapeHtml(r.preparedBy) : '') + '</div>' +
-            '</div>' +
-            '<div class="quote-card-right">' +
-              '<div class="quote-card-amount">' + escapeHtml(sym) + ' ' + fmt(r.grandTotal || 0) + '</div>' +
-              '<div class="quote-card-status">' + statusBadgeHtml(r) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="quote-card-actions">' +
-            '<button class="view-btn" type="button" data-act="view" data-idx="' + idx + '">Görüntüle</button>' +
-            approveBtn + rejectBtn + invoiceBtn + contentEditBtn +
-            '<button class="view-btn" type="button" data-act="edit" data-idx="' + idx + '">Durumu Düzenle</button>' +
-            '<button class="del-btn" type="button" data-act="delete" data-idx="' + idx + '">Sil</button>' +
-          '</div>' +
-        '</div>';
-    }).join('');
+  // ================= Geçmiş Teklifler: filtre, pano, rapor, grafik =================
+  var STATUS_META = {
+    pending:     { label: 'Onay Bekliyor', color: '#8A94A6' },
+    onaylandi:   { label: 'Onaylandı',     color: '#2E7D4F' },
+    faturalandi: { label: 'Faturalandı',   color: '#2952A3' },
+    reddedildi:  { label: 'Onaylanmadı',   color: '#B3261E' }
+  };
+  var BOARD_ORDER = ['pending', 'onaylandi', 'faturalandi', 'reddedildi'];
+  var CHART_ORDER = ['faturalandi', 'pending', 'onaylandi', 'reddedildi'];
+  var NO_BRAND = 'Markasız';
+  var hist = { brand: '', product: '', status: 'all', from: '', to: '', q: '', rptMode: 'brand', chartMetric: 'count' };
+
+  function keyOf(r){ return (r.status === 'onaylandi' || r.status === 'faturalandi' || r.status === 'reddedildi') ? r.status : 'pending'; }
+  function catalogBrandMap(){
+    var m = {};
+    (productsCache || []).forEach(function(p){ if (p.brand) m[String(p.name || '').trim().toLowerCase()] = p.brand; });
+    return m;
   }
+  // Kalemde marka yoksa (eski teklifler) ürün kataloğundaki aynı adlı ürünün markası kullanılır
+  function brandOfItem(it, map){ var b = String(it.brand || '').trim(); return b || map[String(it.name || '').trim().toLowerCase()] || ''; }
+  function productOfItem(it){ return String(it.name || '').trim() || '—'; }
+  function itemMatches(it, map){
+    if (hist.brand && (brandOfItem(it, map) || NO_BRAND) !== hist.brand) return false;
+    if (hist.product && productOfItem(it) !== hist.product) return false;
+    return true;
+  }
+  function matchQuote(r, map, ignoreStatus){
+    if (!ignoreStatus && hist.status !== 'all' && keyOf(r) !== hist.status) return false;
+    if (hist.from && String(r.date || '') < hist.from) return false;
+    if (hist.to && String(r.date || '') > hist.to) return false;
+    if (hist.q) {
+      var hay = (String(r.offerNo || '') + ' ' + String(r.custName || '')).toLowerCase();
+      if (hay.indexOf(hist.q.toLowerCase()) < 0) return false;
+    }
+    if (hist.brand || hist.product) {
+      if (!(r.items || []).some(function(it){ return itemMatches(it, map); })) return false;
+    }
+    return true;
+  }
+  function symOf(r){ return r.sym || CUR_SYMBOL[r.currency] || ''; }
+  function sumsHtml(list){
+    var by = {}, order = [];
+    list.forEach(function(x){ var r = x.r || x, c = r.currency || 'TL'; if (!(c in by)) { by[c] = 0; order.push(c); } by[c] += (r.grandTotal || 0); });
+    if (!order.length) return '&nbsp;';
+    return order.map(function(c){ return escapeHtml(CUR_SYMBOL[c] || c) + ' ' + fmt(by[c]); }).join(' · ');
+  }
+  function cardHtml(r, idx){
+    var sym = symOf(r);
+    var open = (r.status === 'onaylandi' || r.status === 'reddedildi' || r.status === 'faturalandi');
+    var approveBtn = open ? '' : '<button class="view-btn" type="button" data-act="approve" data-idx="' + idx + '">Onaylandı</button>';
+    var rejectBtn = open ? '' : '<button class="view-btn" type="button" data-act="reject" data-idx="' + idx + '" style="color:#B3261E; border-color:#E8B4AE;">Onaylanmadı</button>';
+    var invoiceBtn = (r.status === 'onaylandi') ? '<button class="view-btn" type="button" data-act="invoice" data-idx="' + idx + '">Faturalandı İşaretle</button>' : '';
+    var contentEditBtn = (!r.status) ? '<button class="view-btn" type="button" data-act="contentEdit" data-idx="' + idx + '">İçeriği Düzenle</button>' : '';
+    return '<div class="quote-card">' +
+        '<div class="quote-card-top">' +
+          '<div>' +
+            '<div class="quote-card-id">' + escapeHtml(r.offerNo || '—') + '</div>' +
+            '<div class="quote-card-name">' + escapeHtml(r.custName || '—') + '</div>' +
+            '<div class="quote-card-meta">' + escapeHtml(formatDateTR(r.date)) + (r.preparedBy ? ' · ' + escapeHtml(r.preparedBy) : '') + '</div>' +
+          '</div>' +
+          '<div class="quote-card-right">' +
+            '<div class="quote-card-amount">' + escapeHtml(sym) + ' ' + fmt(r.grandTotal || 0) + '</div>' +
+            '<div class="quote-card-status">' + statusBadgeHtml(r) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="quote-card-actions">' +
+          '<button class="view-btn" type="button" data-act="view" data-idx="' + idx + '">Görüntüle</button>' +
+          approveBtn + rejectBtn + invoiceBtn + contentEditBtn +
+          '<button class="view-btn" type="button" data-act="edit" data-idx="' + idx + '">Durumu Değiştir</button>' +
+          '<button class="del-btn" type="button" data-act="delete" data-idx="' + idx + '">Sil</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderFilterOptions(arr){
+    var map = catalogBrandMap(), brands = {}, prods = {};
+    arr.forEach(function(r){ (r.items || []).forEach(function(it){ brands[brandOfItem(it, map) || NO_BRAND] = 1; prods[productOfItem(it)] = 1; }); });
+    var bl = Object.keys(brands).sort(function(a, b){ if (a === NO_BRAND) return 1; if (b === NO_BRAND) return -1; return a.localeCompare(b, 'tr'); });
+    var pl = Object.keys(prods).sort(function(a, b){ return a.localeCompare(b, 'tr'); });
+    if (hist.brand && !brands[hist.brand]) hist.brand = '';
+    if (hist.product && !prods[hist.product]) hist.product = '';
+    var optsOf = function(list, all, cur){ return '<option value="">' + all + '</option>' + list.map(function(x){ return '<option value="' + escapeAttr(x) + '"' + (x === cur ? ' selected' : '') + '>' + escapeHtml(x) + '</option>'; }).join(''); };
+    gid('fltBrand').innerHTML = optsOf(bl, 'Tüm markalar', hist.brand);
+    gid('fltProduct').innerHTML = optsOf(pl, 'Tüm ürünler', hist.product);
+    gid('fltStatus').value = hist.status;
+  }
+
+  function renderBoard(arr, map){
+    var cols = BOARD_ORDER.filter(function(k){ return hist.status === 'all' || hist.status === k; });
+    var buckets = { pending: [], onaylandi: [], faturalandi: [], reddedildi: [] }, shown = 0;
+    arr.forEach(function(r, idx){ if (matchQuote(r, map, false)) { buckets[keyOf(r)].push({ r: r, idx: idx }); shown++; } });
+    gid('archiveList').innerHTML = cols.map(function(k){
+      var m = STATUS_META[k], b = buckets[k];
+      return '<div class="hist-col" data-col="' + k + '"><div class="hist-col-head" style="border-top-color:' + m.color + ';">' +
+        '<div class="hist-col-title">' + m.label + ' <span class="hist-col-count">' + b.length + '</span></div>' +
+        '<div class="hist-col-sum">' + sumsHtml(b) + '</div></div>' +
+        (b.length ? b.map(function(x){ return cardHtml(x.r, x.idx); }).join('') : '<div class="hist-col-empty">Kayıt yok</div>') + '</div>';
+    }).join('');
+    var filtered = hist.brand || hist.product || hist.status !== 'all' || hist.from || hist.to || hist.q;
+    gid('histSummary').textContent = shown + ' teklif gösteriliyor' + (filtered ? ' (toplam ' + arr.length + ')' : '');
+  }
+
+  // ---- Rapor ----
+  function computeReport(arr, map, mode){
+    var rows = {}, used = {}, usedQty = 0, tot = {};
+    arr.forEach(function(r, qi){
+      if (!matchQuote(r, map, false)) return;
+      var cur = r.currency || 'TL';
+      var lines = (r.items || []).map(function(it){ return { it: it, line: (it.qty || 0) * (it.price || 0) * (1 + (it.marginPercent || 0) / 100) }; });
+      var sub = lines.reduce(function(a, x){ return a + x.line; }, 0);
+      var ratio = sub > 0 ? Math.min(1, (r.discountAmount || 0) / sub) : 0;     // özel indirim kalemlere oranla dağıtılır
+      lines.forEach(function(x){
+        if (!itemMatches(x.it, map)) return;
+        var key = mode === 'brand' ? (brandOfItem(x.it, map) || NO_BRAND) : productOfItem(x.it);
+        var row = rows[key] || (rows[key] = { label: key, quotes: {}, qty: 0, amounts: {} });
+        var net = x.line * (1 - ratio);
+        row.quotes[qi] = 1; row.qty += (x.it.qty || 0); row.amounts[cur] = (row.amounts[cur] || 0) + net;
+        used[qi] = 1; usedQty += (x.it.qty || 0); tot[cur] = (tot[cur] || 0) + net;
+      });
+    });
+    var list = Object.keys(rows).map(function(k){ var r = rows[k]; r.count = Object.keys(r.quotes).length; return r; });
+    list.sort(function(a, b){ return b.count - a.count || a.label.localeCompare(b.label, 'tr'); });
+    return { rows: list, total: { count: Object.keys(used).length, qty: usedQty, amounts: tot } };
+  }
+  function amountsHtml(am){
+    var ks = Object.keys(am);
+    return ks.length ? ks.map(function(c){ return escapeHtml(CUR_SYMBOL[c] || c) + ' ' + fmt(am[c]); }).join('<br/>') : '—';
+  }
+  function renderReport(arr, map){
+    var rep = computeReport(arr, map, hist.rptMode), head = hist.rptMode === 'brand' ? 'Marka' : 'Ürün';
+    gid('rptBrandBtn').classList.toggle('active', hist.rptMode === 'brand');
+    gid('rptProductBtn').classList.toggle('active', hist.rptMode === 'product');
+    if (!rep.rows.length) { gid('rptTableWrap').innerHTML = '<div class="empty-hint">Süzgece uyan kalem yok.</div>'; return; }
+    gid('rptTableWrap').innerHTML = '<div class="rpt-wrap"><table class="data-table" id="rptTable"><thead><tr><th>' + head + '</th><th class="num">Teklif</th><th class="num">Adet</th><th class="num">Tutar (KDV hariç)</th></tr></thead><tbody>' +
+      rep.rows.map(function(r){ return '<tr><td>' + escapeHtml(r.label) + '</td><td class="num">' + r.count + '</td><td class="num">' + fmt(r.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(r.amounts) + '</td></tr>'; }).join('') +
+      '</tbody><tfoot><tr><td>Toplam</td><td class="num">' + rep.total.count + '</td><td class="num">' + fmt(rep.total.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(rep.total.amounts) + '</td></tr></tfoot></table></div>';
+  }
+  function csvCell(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }
+  function reportCsvText(){
+    var arr = getArchiveArray(), map = catalogBrandMap(), rep = computeReport(arr, map, hist.rptMode);
+    var lines = [[hist.rptMode === 'brand' ? 'Marka' : 'Ürün', 'Teklif', 'Adet', 'Para Birimi', 'Tutar (KDV hariç)'].map(csvCell).join(';')];
+    rep.rows.forEach(function(r){
+      var cs = Object.keys(r.amounts);
+      (cs.length ? cs : ['TL']).forEach(function(c){ lines.push([r.label, r.count, String(r.qty).replace('.', ','), c, (r.amounts[c] || 0).toFixed(2).replace('.', ',')].map(csvCell).join(';')); });
+    });
+    return '\ufeff' + lines.join('\r\n');
+  }
+  gid('rptCsvBtn').addEventListener('click', function(){
+    var blob = new Blob([reportCsvText()], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'Offerta_Rapor_' + (hist.rptMode === 'brand' ? 'Marka' : 'Urun') + '_' + todayISO() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  gid('rptBrandBtn').addEventListener('click', function(){ hist.rptMode = 'brand'; renderHistoryView(); });
+  gid('rptProductBtn').addEventListener('click', function(){ hist.rptMode = 'product'; renderHistoryView(); });
+
+  // ---- Grafik (SVG, harici kütüphanesiz) ----
+  function fmtShort(v){ return v >= 1000 ? Math.round(v).toLocaleString('tr-TR') : fmt(v).replace(/,00$/, ''); }
+  function niceMax(v){ if (v <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+  function chartSvg(title, series, isCount){
+    var W = 640, H = 260, L = 56, R = 14, T = 16, B = 46;
+    var maxV = Math.max.apply(null, series.map(function(x){ return x.v; })) || 0;
+    var top = isCount ? Math.max(4, Math.ceil(maxV / 4) * 4) : niceMax(maxV || 1);
+    var plotH = H - T - B, slot = (W - L - R) / series.length, bw = Math.min(78, slot * 0.58), out = '';
+    for (var i = 0; i <= 4; i++) {
+      var tv = top * i / 4, y = H - B - plotH * i / 4;
+      out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '"/><text class="ax" x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + (isCount ? tv : fmtShort(tv)) + '</text>';
+    }
+    series.forEach(function(sr, n){
+      var h = top ? sr.v / top * plotH : 0, x = L + slot * n + (slot - bw) / 2, y = H - B - h;
+      out += '<rect class="bar" data-status="' + sr.k + '" data-value="' + sr.v + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(h, 0).toFixed(1) + '" rx="4" fill="' + sr.color + '"><title>' + escapeHtml(sr.label) + ': ' + (isCount ? sr.v : fmt(sr.v)) + '</title></rect>' +
+        '<text class="val" x="' + (x + bw / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle">' + (isCount ? sr.v : fmtShort(sr.v)) + '</text>' +
+        '<text class="ax" x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - B + 18) + '" text-anchor="middle">' + escapeHtml(sr.label) + '</text>';
+    });
+    return '<div class="chart-box"><div class="chart-title">' + escapeHtml(title) + '</div><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + escapeAttr(title) + '">' + out + '</svg></div>';
+  }
+  function renderChart(arr, map){
+    gid('chCountBtn').classList.toggle('active', hist.chartMetric === 'count');
+    gid('chAmountBtn').classList.toggle('active', hist.chartMetric === 'amount');
+    var list = arr.filter(function(r){ return matchQuote(r, map, true); });          // durum süzgeci yok sayılır
+    var host = gid('statusChart');
+    if (!list.length) { host.innerHTML = '<div class="empty-hint">Gösterilecek teklif yok.</div>'; return; }
+    var series = function(valueOf){ return CHART_ORDER.map(function(k){ return { k: k, label: STATUS_META[k].label, color: STATUS_META[k].color, v: valueOf(k) }; }); };
+    if (hist.chartMetric === 'count') {
+      host.innerHTML = '<div class="chart-grid">' + chartSvg('Teklif adedi', series(function(k){ return list.filter(function(r){ return keyOf(r) === k; }).length; }), true) + '</div>';
+      return;
+    }
+    var curs = []; list.forEach(function(r){ var c = r.currency || 'TL'; if (curs.indexOf(c) < 0) curs.push(c); });
+    host.innerHTML = '<div class="chart-grid">' + curs.map(function(c){
+      return chartSvg('Genel toplam (' + (CUR_SYMBOL[c] || c) + ', KDV dahil)', series(function(k){ return list.filter(function(r){ return keyOf(r) === k && (r.currency || 'TL') === c; }).reduce(function(a, r){ return a + (r.grandTotal || 0); }, 0); }), false);
+    }).join('') + '</div>';
+  }
+  gid('chCountBtn').addEventListener('click', function(){ hist.chartMetric = 'count'; renderHistoryView(); });
+  gid('chAmountBtn').addEventListener('click', function(){ hist.chartMetric = 'amount'; renderHistoryView(); });
+
+  function renderHistoryView(){
+    var arr = getArchiveArray(), map = catalogBrandMap();
+    renderBoard(arr, map); renderReport(arr, map); renderChart(arr, map);
+  }
+  function renderArchive(){
+    var arr = getArchiveArray();
+    gid('archiveCount').textContent = arr.length ? '(' + arr.length + ')' : '';
+    gid('menuHistoryCount').textContent = arr.length ? arr.length + ' teklif' : '';
+    gid('archiveEmpty').style.display = arr.length ? 'none' : '';
+    gid('archiveContent').style.display = arr.length ? '' : 'none';
+    if (!arr.length) return;
+    renderFilterOptions(arr);
+    renderHistoryView();
+  }
+  [['fltBrand', 'brand'], ['fltProduct', 'product'], ['fltStatus', 'status'], ['fltFrom', 'from'], ['fltTo', 'to'], ['fltSearch', 'q']].forEach(function(p){
+    var el = gid(p[0]);
+    var handler = function(){ hist[p[1]] = el.value; renderHistoryView(); };
+    el.addEventListener('change', handler); el.addEventListener('input', handler);
+  });
+  gid('fltClear').addEventListener('click', function(){
+    hist.brand = ''; hist.product = ''; hist.status = 'all'; hist.from = ''; hist.to = ''; hist.q = '';
+    gid('fltFrom').value = ''; gid('fltTo').value = ''; gid('fltSearch').value = '';
+    renderFilterOptions(getArchiveArray()); renderHistoryView();
+  });
+
+  // ---- Durumu değiştir (işlem şifresiyle; "Onay Bekliyor"a geri çekmek dahil) ----
+  var statusModalIdx = null;
+  function stsMsg(msg, cls){ var el = gid('stsMsg'); el.textContent = msg || ''; el.className = 'status-msg' + (cls ? ' ' + cls : ''); }
+  function toggleStsNote(){ gid('stsNoteWrap').style.display = gid('stsNew').value === 'reddedildi' ? '' : 'none'; }
+  function openStatusModal(idx){
+    var r = getArchiveArray()[idx]; if (!r) return;
+    statusModalIdx = idx;
+    var hasPin = !!tenantSettings().hasPin;
+    gid('stsTitle').textContent = 'Durumu Değiştir — ' + (r.offerNo || '');
+    gid('stsCurrent').textContent = (r.custName || '—') + ' · şu anki durum: ' + STATUS_META[keyOf(r)].label;
+    gid('stsNew').value = keyOf(r);
+    gid('stsNote').value = r.rejectNote || '';
+    gid('stsPin').value = '';
+    gid('stsPinWrap').style.display = hasPin ? '' : 'none';
+    gid('stsAdminHint').style.display = (!hasPin && !isTenantAdmin()) ? '' : 'none';
+    toggleStsNote(); stsMsg('');
+    gid('stsSave').disabled = false;
+    gid('statusModal').style.display = 'flex';
+  }
+  gid('stsNew').addEventListener('change', toggleStsNote);
+  gid('stsClose').addEventListener('click', function(){ gid('statusModal').style.display = 'none'; });
+  gid('stsSave').addEventListener('click', function(){
+    var r = getArchiveArray()[statusModalIdx]; if (!r) return;
+    var key = gid('stsNew').value, hasPin = !!tenantSettings().hasPin, pin = gid('stsPin').value;
+    if (key === keyOf(r)) { gid('statusModal').style.display = 'none'; return; }
+    if (hasPin && !pin) { stsMsg('İşlem şifresi gerekli.', 'err'); return; }
+    var changes = { status: key === 'pending' ? '' : key, statusDate: key === 'pending' ? '' : todayISO() };
+    if (key === 'reddedildi') changes.rejectNote = gid('stsNote').value.trim();
+    var btn = gid('stsSave'); btn.disabled = true; stsMsg('Kaydediliyor…');
+    pendingPin = hasPin ? pin : '';
+    quotesColRef.doc(r._id).update(changes).then(function(){ btn.disabled = false; gid('statusModal').style.display = 'none'; })
+      .catch(function(err){ btn.disabled = false; stsMsg(err.message, 'err'); });
+  });
 
   function getArchiveArray(){ return cloudReady ? archiveCache : getLocalArchive(); }
 
@@ -2019,16 +2329,7 @@
     } else if (act === 'contentEdit') {
       loadQuoteForEdit(record, record._id || idx);
     } else if (act === 'edit') {
-      if (!askPin('Durumu değiştirmek için şifre girin:')) return;
-      var choice = prompt('Yeni durum için yazın: "onay" (Onaylandı), "red" (Onaylanmadı) veya "fatura" (Faturalandı — mevcut fatura belgesi varsa korunur)', record.status === 'reddedildi' ? 'onay' : 'red');
-      if (choice === null) return;
-      choice = choice.trim().toLowerCase();
-      var newStatus = null;
-      if (choice === 'onay' || choice === 'onaylandi' || choice === 'onaylandı') newStatus = 'onaylandi';
-      else if (choice === 'red' || choice === 'reddedildi') newStatus = 'reddedildi';
-      else if (choice === 'fatura' || choice === 'faturalandi' || choice === 'faturalandı') newStatus = 'faturalandi';
-      else { alert('Geçersiz giriş. "onay", "red" veya "fatura" yazmalısınız.'); return; }
-      persistRecordUpdate(idx, { status: newStatus, statusDate: todayISO() });
+      openStatusModal(idx);
     } else if (act === 'delete') {
 
       if (!askPin('Bu teklifi silmek için şifre girin:')) return;
