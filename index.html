@@ -276,6 +276,9 @@
   .seg-btn.active{ background:var(--amber); color:#1a1200; font-weight:700; }
   .data-table tfoot td{ font-weight:800; background:var(--bg); border-top:1px solid var(--line); }
   .rpt-wrap{ overflow-x:auto; }
+  .fx-warn{ color:#B3261E; cursor:help; }
+  .fx-details{ margin-top:10px; font-size:12.5px; }
+  .fx-details summary{ cursor:pointer; color:var(--ink-soft); padding:6px 0; }
   .chart-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 560px)); gap:16px; justify-content:start; }
   .chart-box{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
   .chart-title{ font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
@@ -636,10 +639,16 @@
                 <button type="button" id="rptBrandBtn" class="seg-btn active">Marka bazında</button>
                 <button type="button" id="rptProductBtn" class="seg-btn">Ürün bazında</button>
               </div>
+              <div class="seg" title="Dönüşümde kullanılacak TCMB kuru">
+                <button type="button" id="rptRateBuyBtn" class="seg-btn active">Döviz Alış</button>
+                <button type="button" id="rptRateSellBtn" class="seg-btn">Döviz Satış</button>
+              </div>
               <button class="view-btn" id="rptCsvBtn" type="button">CSV indir</button>
             </div>
-            <div class="hint" style="margin-bottom:8px;">Tutar = kalemlerin KDV hariç, özel indirim payı düşülmüş toplamı. Marka/ürün süzgeci seçiliyse yalnızca eşleşen kalemler sayılır.</div>
+            <div class="hint" style="margin-bottom:6px;">Tutar = kalemlerin KDV hariç, özel indirim payı düşülmüş toplamı. Marka/ürün süzgeci seçiliyse yalnızca eşleşen kalemler sayılır. Dolar ve TL karşılıkları, her teklifin <b>tarihindeki</b> TCMB kuruyla hesaplanır.</div>
+            <div class="hint" id="rptFxNote" style="margin-bottom:8px;"></div>
             <div id="rptTableWrap"></div>
+            <div id="rptFxDetails"></div>
           </div>
 
           <div class="hist-section">
@@ -2149,49 +2158,114 @@
     gid('histSummary').textContent = shown + ' teklif gösteriliyor' + (filtered ? ' (toplam ' + arr.length + ')' : '');
   }
 
+  // ---- Döviz kurları: teklif tarihindeki TCMB kuru (sunucu önbelleğinden) ----
+  var fx = { cache: {}, type: 'buy', inflight: false, error: '' };
+  var ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function fxFor(date){
+    var r = fx.cache[date]; if (!r) return null;
+    var b = fx.type === 'buy';
+    return { usd: b ? r.usdBuy : r.usdSell, eur: b ? r.eurBuy : r.eurSell, published: r.published, source: r.source };
+  }
+  function ensureFx(dates){
+    var need = dates.filter(function(d){ return ISO_RE.test(d) && !(d in fx.cache); });
+    if (!need.length || fx.inflight || fx.error) return;
+    fx.inflight = true;
+    api('GET', '/api/fx?dates=' + need.slice(0, 40).join(',')).then(function(res){
+      Object.keys(res.rates || {}).forEach(function(d){ fx.cache[d] = res.rates[d]; });          // null = kur bulunamadı
+      fx.inflight = false;
+      renderReport(getArchiveArray(), catalogBrandMap());                                         // kalan tarihler varsa yeniden istenir
+    }).catch(function(err){
+      fx.inflight = false; fx.error = err.message || 'Kurlar alınamadı';
+      renderReport(getArchiveArray(), catalogBrandMap());
+    });
+  }
+
   // ---- Rapor ----
   function computeReport(arr, map, mode){
-    var rows = {}, used = {}, usedQty = 0, tot = {};
+    var rows = {}, used = {}, usedQty = 0, dates = {};
+    var tot = { orig: {}, usd: 0, tl: 0, missUsd: {}, missTl: {}, byCur: {} };
     arr.forEach(function(r, qi){
       if (!matchQuote(r, map, false)) return;
-      var cur = r.currency || 'TL';
+      var cur = r.currency || 'TL', rt = fxFor(r.date);
       var lines = (r.items || []).map(function(it){ return { it: it, line: (it.qty || 0) * (it.price || 0) * (1 + (it.marginPercent || 0) / 100) }; });
       var sub = lines.reduce(function(a, x){ return a + x.line; }, 0);
       var ratio = sub > 0 ? Math.min(1, (r.discountAmount || 0) / sub) : 0;     // özel indirim kalemlere oranla dağıtılır
       lines.forEach(function(x){
         if (!itemMatches(x.it, map)) return;
         var key = mode === 'brand' ? (brandOfItem(x.it, map) || NO_BRAND) : productOfItem(x.it);
-        var row = rows[key] || (rows[key] = { label: key, quotes: {}, qty: 0, amounts: {} });
-        var net = x.line * (1 - ratio);
-        row.quotes[qi] = 1; row.qty += (x.it.qty || 0); row.amounts[cur] = (row.amounts[cur] || 0) + net;
-        used[qi] = 1; usedQty += (x.it.qty || 0); tot[cur] = (tot[cur] || 0) + net;
+        var row = rows[key] || (rows[key] = { label: key, quotes: {}, qty: 0, orig: {}, usd: 0, tl: 0, missUsd: {}, missTl: {}, byCur: {} });
+        var net = x.line * (1 - ratio), usd = null, tl = null;
+        if (cur === 'USD') { usd = net; tl = rt ? net * rt.usd : null; }
+        else if (cur === 'EUR') { tl = rt ? net * rt.eur : null; usd = rt ? net * rt.eur / rt.usd : null; }
+        else { tl = net; usd = rt ? net / rt.usd : null; }
+        [row, tot].forEach(function(g){
+          g.orig[cur] = (g.orig[cur] || 0) + net;
+          if (usd === null) g.missUsd[qi] = 1; else g.usd += usd;
+          if (tl === null) g.missTl[qi] = 1; else g.tl += tl;
+        });
+        var bc = row.byCur[cur] || (row.byCur[cur] = { orig: 0, usd: 0, tl: 0, missUsd: false, missTl: false });
+        bc.orig += net; if (usd === null) bc.missUsd = true; else bc.usd += usd; if (tl === null) bc.missTl = true; else bc.tl += tl;
+        row.quotes[qi] = 1; row.qty += (x.it.qty || 0); used[qi] = 1; usedQty += (x.it.qty || 0);
+        if (r.date) dates[r.date] = 1;
       });
     });
     var list = Object.keys(rows).map(function(k){ var r = rows[k]; r.count = Object.keys(r.quotes).length; return r; });
     list.sort(function(a, b){ return b.count - a.count || a.label.localeCompare(b.label, 'tr'); });
-    return { rows: list, total: { count: Object.keys(used).length, qty: usedQty, amounts: tot } };
+    tot.count = Object.keys(used).length; tot.qty = usedQty;
+    return { rows: list, total: tot, dates: Object.keys(dates).sort() };
   }
   function amountsHtml(am){
     var ks = Object.keys(am);
     return ks.length ? ks.map(function(c){ return escapeHtml(CUR_SYMBOL[c] || c) + ' ' + fmt(am[c]); }).join('<br/>') : '—';
   }
+  function convCell(sym, value, missing){
+    var warn = Object.keys(missing).length ? ' <span class="fx-warn" title="Bazı tekliflerin kuru bulunamadı; bu tutar eksik olabilir">⚠</span>' : '';
+    return sym + ' ' + fmt(value) + warn;
+  }
   function renderReport(arr, map){
     var rep = computeReport(arr, map, hist.rptMode), head = hist.rptMode === 'brand' ? 'Marka' : 'Ürün';
     gid('rptBrandBtn').classList.toggle('active', hist.rptMode === 'brand');
     gid('rptProductBtn').classList.toggle('active', hist.rptMode === 'product');
-    if (!rep.rows.length) { gid('rptTableWrap').innerHTML = '<div class="empty-hint">Süzgece uyan kalem yok.</div>'; return; }
-    gid('rptTableWrap').innerHTML = '<div class="rpt-wrap"><table class="data-table" id="rptTable"><thead><tr><th>' + head + '</th><th class="num">Teklif</th><th class="num">Adet</th><th class="num">Tutar (KDV hariç)</th></tr></thead><tbody>' +
-      rep.rows.map(function(r){ return '<tr><td>' + escapeHtml(r.label) + '</td><td class="num">' + r.count + '</td><td class="num">' + fmt(r.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(r.amounts) + '</td></tr>'; }).join('') +
-      '</tbody><tfoot><tr><td>Toplam</td><td class="num">' + rep.total.count + '</td><td class="num">' + fmt(rep.total.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(rep.total.amounts) + '</td></tr></tfoot></table></div>';
+    gid('rptRateBuyBtn').classList.toggle('active', fx.type === 'buy');
+    gid('rptRateSellBtn').classList.toggle('active', fx.type === 'sell');
+    ensureFx(rep.dates);                                                                       // eksik kurları iste (varsa)
+    var pendingDates = rep.dates.filter(function(d){ return !(d in fx.cache); });
+    var noRate = rep.dates.filter(function(d){ return d in fx.cache && !fx.cache[d]; });
+    var noteEl = gid('rptFxNote'), typeLbl = fx.type === 'buy' ? 'döviz alış' : 'döviz satış', ecb = false;
+    rep.dates.forEach(function(d){ if (fx.cache[d] && fx.cache[d].source === 'ECB') ecb = true; });
+    if (fx.error) noteEl.innerHTML = 'Kurlar alınamadı: ' + escapeHtml(fx.error) + ' <button class="view-btn" id="fxRetryBtn" type="button">Yeniden dene</button>';
+    else if (pendingDates.length) noteEl.textContent = 'Kurlar yükleniyor… (' + pendingDates.length + ' tarih)';
+    else noteEl.textContent = 'Kur: TCMB ' + typeLbl + ', teklif tarihi (hafta sonu/tatilde önceki iş günü)' + (ecb ? '; bazı tarihlerde yedek kaynak (ECB orta kuru) kullanıldı' : '') + (noRate.length ? '. ⚠ ' + noRate.length + ' tarih için kur bulunamadı: dönüştürülmüş tutarlar eksik olabilir.' : '.');
+    var fxb = gid('fxRetryBtn'); if (fxb) fxb.addEventListener('click', function(){ fx.error = ''; renderReport(getArchiveArray(), catalogBrandMap()); });
+    if (!rep.rows.length) { gid('rptTableWrap').innerHTML = '<div class="empty-hint">Süzgece uyan kalem yok.</div>'; gid('rptFxDetails').innerHTML = ''; return; }
+    var T = rep.total;
+    gid('rptTableWrap').innerHTML = '<div class="rpt-wrap"><table class="data-table" id="rptTable"><thead><tr><th>' + head + '</th><th class="num">Teklif</th><th class="num">Adet</th><th class="num">Tutar (orijinal para birimi)</th><th class="num">Dolar karşılığı</th><th class="num">TL karşılığı</th></tr></thead><tbody>' +
+      rep.rows.map(function(r){
+        return '<tr><td>' + escapeHtml(r.label) + '</td><td class="num">' + r.count + '</td><td class="num">' + fmt(r.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(r.orig) + '</td>' +
+          '<td class="num">' + convCell('$', r.usd, r.missUsd) + '</td><td class="num">' + convCell('₺', r.tl, r.missTl) + '</td></tr>';
+      }).join('') +
+      '</tbody><tfoot><tr><td>Toplam</td><td class="num">' + T.count + '</td><td class="num">' + fmt(T.qty).replace(/,00$/, '') + '</td><td class="num">' + amountsHtml(T.orig) + '</td>' +
+      '<td class="num">' + convCell('$', T.usd, T.missUsd) + '</td><td class="num">' + convCell('₺', T.tl, T.missTl) + '</td></tr></tfoot></table></div>';
+    var used = rep.dates.filter(function(d){ return fx.cache[d]; });
+    gid('rptFxDetails').innerHTML = used.length ? '<details class="fx-details"><summary>Kullanılan kurlar (' + used.length + ' tarih)</summary><div class="rpt-wrap"><table class="data-table"><thead><tr><th>Teklif tarihi</th><th>Kur tarihi</th><th class="num">USD/TL</th><th class="num">EUR/TL</th><th>Kaynak</th></tr></thead><tbody>' +
+      used.map(function(d){ var r = fxFor(d); return '<tr><td>' + escapeHtml(formatDateTR(d)) + '</td><td>' + escapeHtml(formatDateTR(r.published)) + (r.published !== d ? ' <span style="color:var(--muted);">(önceki iş günü)</span>' : '') + '</td><td class="num">' + r.usd.toFixed(4).replace('.', ',') + '</td><td class="num">' + r.eur.toFixed(4).replace('.', ',') + '</td><td>' + escapeHtml(r.source) + '</td></tr>'; }).join('') +
+      '</tbody></table></div></details>' : '';
   }
   function csvCell(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }
+  function csvNum(n){ return n.toFixed(2).replace('.', ','); }
   function reportCsvText(){
     var arr = getArchiveArray(), map = catalogBrandMap(), rep = computeReport(arr, map, hist.rptMode);
-    var lines = [[hist.rptMode === 'brand' ? 'Marka' : 'Ürün', 'Teklif', 'Adet', 'Para Birimi', 'Tutar (KDV hariç)'].map(csvCell).join(';')];
+    var lines = [[hist.rptMode === 'brand' ? 'Marka' : 'Ürün', 'Teklif', 'Adet', 'Para Birimi', 'Tutar (orijinal)', 'Tutar (USD karşılığı)', 'Tutar (TL karşılığı)'].map(csvCell).join(';')];
     rep.rows.forEach(function(r){
-      var cs = Object.keys(r.amounts);
-      (cs.length ? cs : ['TL']).forEach(function(c){ lines.push([r.label, r.count, String(r.qty).replace('.', ','), c, (r.amounts[c] || 0).toFixed(2).replace('.', ',')].map(csvCell).join(';')); });
+      Object.keys(r.byCur).forEach(function(c){
+        var b = r.byCur[c];
+        lines.push([r.label, r.count, String(r.qty).replace('.', ','), c, csvNum(b.orig), b.missUsd ? '' : csvNum(b.usd), b.missTl ? '' : csvNum(b.tl)].map(csvCell).join(';'));
+      });
     });
+    var T = rep.total;
+    lines.push(['Toplam', T.count, String(T.qty).replace('.', ','), '', '', Object.keys(T.missUsd).length ? '' : csvNum(T.usd), Object.keys(T.missTl).length ? '' : csvNum(T.tl)].map(csvCell).join(';'));
+    Object.keys(T.orig).forEach(function(c){ lines.push(['Toplam (orijinal)', '', '', c, csvNum(T.orig[c]), '', ''].map(csvCell).join(';')); });
+    lines.push(['Kur', 'TCMB ' + (fx.type === 'buy' ? 'döviz alış' : 'döviz satış') + ', teklif tarihi'].map(csvCell).join(';'));
     return '\ufeff' + lines.join('\r\n');
   }
   gid('rptCsvBtn').addEventListener('click', function(){
@@ -2202,6 +2276,8 @@
   });
   gid('rptBrandBtn').addEventListener('click', function(){ hist.rptMode = 'brand'; renderHistoryView(); });
   gid('rptProductBtn').addEventListener('click', function(){ hist.rptMode = 'product'; renderHistoryView(); });
+  gid('rptRateBuyBtn').addEventListener('click', function(){ fx.type = 'buy'; renderReport(getArchiveArray(), catalogBrandMap()); });
+  gid('rptRateSellBtn').addEventListener('click', function(){ fx.type = 'sell'; renderReport(getArchiveArray(), catalogBrandMap()); });
 
   // ---- Grafik (SVG, harici kütüphanesiz) ----
   function fmtShort(v){ return v >= 1000 ? Math.round(v).toLocaleString('tr-TR') : fmt(v).replace(/,00$/, ''); }
